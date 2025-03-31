@@ -1,4 +1,4 @@
-# TheHunt
+# The Hunt
 A dueling card game based in the Half-Continent
 
 *"In the bog-ridden reaches of the Half-Continent, monster hunting is not a calling — it’s a contract."*
