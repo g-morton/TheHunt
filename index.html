@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>The Hunt</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <section class="board-col">
+      <header class="topbar">
+        <h1 class="brand">THE HUNT</h1>
+        <button id="btn-newgame" class="btn ghost big">START NEW GAME</button>
+      </header>
+
+      <!-- CPU band -->
+      <section class="band cpu">
+        <div class="side-label vert">CPU</div>
+        <div class="band-inner">
+          <div class="cpu-matrix">
+            <div class="left-piles">
+              <div id="cpu-deck" class="pile slot"></div>
+            </div>
+            <div id="cpu-register" class="register"></div>
+            <div class="right-piles">
+              <div id="cpu-burn" class="pile slot"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PLAYER band -->
+      <section class="band player">
+        <div class="side-label vert">PLAYER</div>
+        <div class="band-inner">
+          <div class="player-matrix">
+            <div class="left-piles">
+              <div id="player-deck" class="pile slot"></div>
+              <div id="player-archive" class="pile slot"></div>
+            </div>
+            <div id="player-register" class="register"></div>
+            <div class="right-piles">
+              <div id="player-discard" class="pile slot"></div>
+              <div id="player-burn" class="pile slot"></div>
+            </div>
+            <div id="player-hand" class="hand"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PHASE BAR -->
+      <footer class="actionbar">
+        <div class="turn-pill" id="turn-pill">YOUR TURN</div>
+        <div class="phases">
+          <button class="phase" data-phase="hunt"    id="btn-hunt">Hunt</button>
+          <span class="arrow" data-phase="hunt">or skip</span>
+          <button class="phase" data-phase="trade"   id="btn-trade">Trade</button>
+          <span class="arrow" data-phase="trade">or skip</span>
+          <button class="phase" data-phase="restock" id="btn-restock">Restock</button>
+          <span class="arrow" data-phase="restock">or skip</span>
+          <button class="phase" data-phase="discard" id="btn-discard">Discard</button>
+          <span class="arrow" data-phase="discard">or skip</span>
+          <button class="phase" data-phase="refresh"     id="btn-refresh">REFRESH</button>
+        </div>
+        <div id="phase-hint" class="phase-hint"></div>
+      </footer>
+    </section>
+
+    <!-- LOG / SCORE -->
+    <aside class="log-col">
+      <div class="log-panel">
+        <div class="log-title">GAME LOG</div>
+        <div id="log" class="log"></div>
+      </div>
+      <div class="scoreboard">
+        <div class="score you">
+          <div class="label">PLAYER TENDER</div>
+          <div class="value" id="tender-you">0</div>
+        </div>
+        <div class="score cpu">
+          <div class="label">CPU TENDER</div>
+          <div class="value" id="tender-cpu">0</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

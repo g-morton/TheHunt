@@ -1,0 +1,23 @@
+[
+  { "t": "HUNTER", "name": "Lamplighter", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg", "traits": ["regimented"] },
+  { "t": "HUNTER", "name": "Musketeer",  "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg", "traits": ["regimented"]},
+  { "t": "HUNTER", "name": "Haubardier", "power": 2, "foil": 1, "requires": { "any": 2 }, "img": "pediteer.jpg", "traits": ["regimented"] },
+  { "t": "HUNTER", "name": "Swordist",   "power": 4, "foil": 2, "requires": { "Kit": 2 }, "img": "swordist.jpg" },
+  { "t": "HUNTER", "name": "Pistoleer",      "power": 4, "foil": 2, "requires": { "Kit": 1, "Script": 1 }, "img": "pistoleer.jpg" },
+  { "t": "HUNTER", "name": "Lurksman",      "power": 2, "foil": 4, "requires": { "Script": 1 }, "img": "lurksman.jpg" },
+  { "t": "HUNTER", "name": "Fulgar",      "power": 6, "foil": 2, "requires": { "Treacle": 3 }, "img": "fulgar.jpg" },
+  { "t": "HUNTER", "name": "Wit",      "power": 4, "foil": 4, "requires": { "Treacle": 3 }, "img": "fulgar.jpg" },
+  { "t": "HUNTER", "name": "Skold",      "power": 2, "foil": 4, "requires": { "Kit": 1, "Script": 2 }, "img": "fulgar.jpg" },
+  { "t": "HUNTER", "name": "Scourge",      "power": 6, "foil": 2, "requires": { "Kit": 1, "Script": 2 }, "img": "fulgar.jpg" },
+
+  { "t": "MONSTER", "name": "Grinling",   "power": 2, "tender": 1, "img": "grinling.jpg" },
+  { "t": "MONSTER", "name": "Bogle",   "power": 4, "tender": 2, "img": "bogle.jpg" },
+  { "t": "MONSTER", "name": "Brodchin",       "power": 6, "tender": 3, "img": "brodchin.jpg" },
+  { "t": "MONSTER", "name": "Swarty", "power": 8, "tender": 4, "img": "swarty.jpg" },
+  { "t": "MONSTER", "name": "Shrewd", "power": 10, "tender": 5, "img": "shrewd.jpg" },
+  { "t": "MONSTER", "name": "Trought", "power": 14, "tender": 6, "img": "trought.jpg" },
+
+  { "t": "SUPPLY", "name": "Kit",        "tag": "Kit", "img": "kit.jpg" },
+  { "t": "SUPPLY", "name": "Script",     "tag": "Script", "img": "script.jpg"},
+  { "t": "SUPPLY", "name": "Treacle",     "tag": "Treacle","img": "treacle.jpg" }
+]
