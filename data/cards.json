@@ -1,7 +1,7 @@
 [
   { "t": "HUNTER", "name": "Lamplighter", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg", "traits": ["regimented"] },
   { "t": "HUNTER", "name": "Musketeer",  "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg", "traits": ["regimented"]},
-  { "t": "HUNTER", "name": "Haubardier", "power": 2, "foil": 1, "requires": { "any": 2 }, "img": "pediteer.jpg", "traits": ["regimented"] },
+  { "t": "HUNTER", "name": "Haubardier", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg", "traits": ["regimented"] },
   { "t": "HUNTER", "name": "Swordist",   "power": 4, "foil": 2, "requires": { "Kit": 2 }, "img": "swordist.jpg" },
   { "t": "HUNTER", "name": "Pistoleer",      "power": 4, "foil": 2, "requires": { "Kit": 1, "Script": 1 }, "img": "pistoleer.jpg" },
   { "t": "HUNTER", "name": "Lurksman",      "power": 2, "foil": 4, "requires": { "Script": 1 }, "img": "lurksman.jpg" },

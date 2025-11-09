@@ -213,6 +213,7 @@ export async function resumeCpuHuntFromInterrupt(playerFoilCard = null){
   const gain = target.tender || 0;
   if (gain) {
     State.cpu.tender = (State.cpu.tender || 0) + gain;
+    window.dispatchEvent(new CustomEvent('stateChanged'));
   }
 
   log(`

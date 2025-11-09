@@ -44,7 +44,7 @@ export function executeHunt() {
   const hunters    = Array.from(hunterSet);
   const monsterSel = State.sel.monster;
 
-  // 1) CPU FOIL CHECK
+  // 1) CPU FOIL CHECK stays the same...
   const foilResult = tryCpuFoil(hunters);
   if (foilResult) {
     const { chosen: cpuHunter, targetFoil } = foilResult;
@@ -78,21 +78,33 @@ export function executeHunt() {
 
   const monsterCard = monsterStack[monsterStack.length - 1];
 
+  // move your hunters out of hand
   hunters.forEach(h => {
     const idx = State.you.hand.indexOf(h);
     if (idx >= 0) State.you.hand.splice(idx, 1);
     State.you.discard.push(h);
   });
 
+  // remove monster from board
   monsterStack.pop();
   State.you.burn.push(monsterCard);
 
+  // ⭐ ADD TENDER HERE
+const gain = Number(monsterCard.tender || 0);
+if (gain > 0) {
+  State.you.tender = Number(State.you.tender || 0) + gain;
+}
+
   log(`<p class='sys'>🎯 You successfully hunted ${monsterCard.name}.</p>`);
 
+  // clear selection
   State.sel.hunters.clear();
   State.sel.monster = null;
 
   updateHuntReadiness();
+
+  // let UI re-render tender
+  window.dispatchEvent(new CustomEvent('stateChanged'));
 }
 
 /* ---------------------- helpers ---------------------- */
