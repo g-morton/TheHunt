@@ -2,11 +2,20 @@
   { "t": "HUNTER", "name": "Lamplighter", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg", "traits": ["regimented"] },
   { "t": "HUNTER", "name": "Musketeer",  "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg", "traits": ["regimented"]},
   { "t": "HUNTER", "name": "Haubardier", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg", "traits": ["regimented"] },
+  { "t": "HUNTER", "name": "Troubardier", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg", "traits": ["regimented"] },
+
   { "t": "HUNTER", "name": "Swordist",   "power": 4, "foil": 2, "requires": { "Kit": 2 }, "img": "swordist.jpg" },
   { "t": "HUNTER", "name": "Pistoleer",      "power": 4, "foil": 2, "requires": { "Kit": 1, "Script": 1 }, "img": "pistoleer.jpg" },
-  { "t": "HUNTER", "name": "Lurksman",      "power": 2, "foil": 4, "requires": { "Script": 1 }, "img": "lurksman.jpg" },
+  { "t": "HUNTER", "name": "Sagaar",      "power": 4, "foil": 2, "requires": { "Kit": 2 }, "img": "pistoleer.jpg" },
+  { "t": "HUNTER", "name": "Toxothete",      "power": 4, "foil": 2, "requires": { "Kit": 2 }, "img": "pistoleer.jpg" },
+
+  { "t": "HUNTER", "name": "Lurksman",      "power": 2, "foil": 2, "requires": { "Script": 1 }, "img": "lurksman.jpg" },
+  { "t": "HUNTER", "name": "Factotum",      "power": 2, "foil": 2, "requires": { "Treacle": 1 }, "img": "lurksman.jpg" },
+
   { "t": "HUNTER", "name": "Fulgar",      "power": 6, "foil": 2, "requires": { "Treacle": 3 }, "img": "fulgar.jpg" },
   { "t": "HUNTER", "name": "Wit",      "power": 4, "foil": 4, "requires": { "Treacle": 3 }, "img": "fulgar.jpg" },
+  { "t": "HUNTER", "name": "Sciomane",      "power": 4, "foil": 4, "requires": { "Treacle": 3 }, "img": "fulgar.jpg" },
+
   { "t": "HUNTER", "name": "Skold",      "power": 2, "foil": 4, "requires": { "Kit": 1, "Script": 2 }, "img": "fulgar.jpg" },
   { "t": "HUNTER", "name": "Scourge",      "power": 6, "foil": 2, "requires": { "Kit": 1, "Script": 2 }, "img": "fulgar.jpg" },
 

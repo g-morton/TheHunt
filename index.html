@@ -12,24 +12,34 @@
       <header class="topbar">
         <h1 class="brand">THE HUNT</h1>
         <button id="btn-newgame" class="btn ghost big">START NEW GAME</button>
+          <input type="checkbox" id="beginner-mode" checked>
+          Beginner
       </header>
 
-      <!-- CPU band -->
-      <section class="band cpu">
-        <div class="side-label vert">CPU</div>
-        <div class="band-inner">
-          <div class="cpu-matrix">
-            <div class="left-piles">
-              <div id="cpu-deck" class="pile slot"></div>
-              <div id="cpu-burn" class="pile slot"></div>
-            </div>
-            <div id="cpu-register" class="register"></div>
-              <div id="cpu-hand" class="pile slot"></div>
-            <div class="right-piles">
-            </div>
+
+    <!-- CPU band -->
+    <section class="band cpu">
+      <div class="side-label vert">CPU</div>
+      <div class="band-inner">
+        <div class="cpu-matrix">
+          <!-- left piles -->
+          <div class="left-piles">
+            <div id="cpu-deck" class="pile slot"></div>
+            <div id="cpu-burn" class="pile slot"></div>
+          </div>
+          <!-- center area (roster + hand) -->
+          <div class="cpu-center">
+            <div id="cpu-roster" class="roster"></div>
+            <div id="cpu-hand" class="hand cpu-hand"></div>
+          </div>
+          <!-- right piles -->
+          <div class="right-piles">
+            <div id="cpu-stock" class="pile slot"></div>
+            <div id="cpu-backlog" class="pile slot"></div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
       <!-- PLAYER band -->
       <section class="band player">
@@ -40,10 +50,10 @@
               <div id="player-deck" class="pile slot"></div>
               <div id="player-burn" class="pile slot"></div>
             </div>
-            <div id="player-register" class="register"></div>
+            <div id="player-roster" class="roster"></div>
             <div class="right-piles">
-              <div id="player-stock" class="pile slot"></div><!--Was archive, now stock-->
-              <div id="player-backlog" class="pile slot"></div><!--Was discard, now backlog-->
+              <div id="player-stock" class="pile slot"></div>
+              <div id="player-backlog" class="pile slot"></div>
             </div>
             <div id="player-hand" class="hand"></div>
           </div>
@@ -52,17 +62,18 @@
 
       <!-- PHASE BAR -->
       <footer class="actionbar">
-        <div class="turn-pill" id="turn-pill">YOUR TURN</div>
+        
         <div class="phases">
+          <div class="turn-pill" id="turn-pill">YOUR TURN</div>
           <button class="phase" data-phase="hunt"    id="btn-hunt">Hunt</button>
-          <span class="arrow" data-phase="hunt">or skip</span>
+          <span class="arrow" data-phase="hunt">or Done</span>
           <button class="phase" data-phase="trade"   id="btn-trade">Trade</button>
-          <span class="arrow" data-phase="trade">or skip</span>
+          <span class="arrow" data-phase="trade">or Done</span>
           <button class="phase" data-phase="restock" id="btn-restock">Restock</button>
-          <span class="arrow" data-phase="restock">or skip</span>
-          <button class="phase" data-phase="backlog" id="btn-backlog">backlog</button>
-          <span class="arrow" data-phase="backlog">or skip</span>
-          <button class="phase" data-phase="refresh"     id="btn-refresh">REFRESH</button>
+          <span class="arrow" data-phase="restock">or Done</span>
+          <button class="phase" data-phase="backlog" id="btn-backlog">Backlog</button>
+          <span class="arrow" data-phase="backlog">or Done</span>
+          <button class="phase" data-phase="refresh"     id="btn-refresh">Refresh</button>
         </div>
         <div id="phase-hint" class="phase-hint"></div>
       </footer>

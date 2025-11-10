@@ -31,7 +31,7 @@ function countSupplies(supplies){
   return have;
 }
 function findSelectedTradeHunters(){
-  const regs = State.you.register;
+  const regs = State.you.roster;
   const out = [];
   (State.sel.tradeHunters || new Set()).forEach(idx => {
     const stack = regs[idx];
@@ -80,7 +80,7 @@ export function executeTrade(){
     if ((have['any'] || 0) < reqs.any) ok = false;
   }
   if (!ok){
-    log("<p class='sys'>Trade failed: selected Supply doesn't meet combined Hunter requirements.</p>");
+    log("<p class='sys'>Trade failed: selected Supply doesn't meet Hunter requirements.</p>");
     return;
   }
 
@@ -95,7 +95,7 @@ export function executeTrade(){
 
   // move hunters -> backlog (per latest rule)
   selHunters.forEach(h => {
-    const stack = State.you.register[h.idx];
+    const stack = State.you.roster[h.idx];
     stack.pop();
     State.you.backlog.push(h.card);
   });
@@ -103,5 +103,5 @@ export function executeTrade(){
   State.sel.tradeSupply.clear();
   State.sel.tradeHunters.clear();
 
-  log("<p class='you'>Trade successful: Hunters paid for and moved to backlog. Supply backloged.</p>");
+  log("<p class='you'>Trade successful: Hunters and Supply sent to backlog.</p>");
 }

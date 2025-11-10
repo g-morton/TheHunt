@@ -5,38 +5,17 @@ export const State = {
   phase: 'hunt',
   readyPhase: null,
   cards: [],
-  turnCount: 1,
+  turnCount: 0,
+  beginner: true,
 
-  you: {
-    deck: [],
-    stock: [],
-    backlog: [],
-    burn: [],
-    hand: [],
-    register: [ [], [], [], [], [] ],
-    tender: 0
-  },
-
-  cpu: {
-    deck: [],
-    stock: [],
-    backlog: [],
-    burn: [],
-    hand: [],
-    register: [ [], [], [], [], [] ],
-    tender: 0
-  },
+  you: { deck: [], stock: [], backlog: [], burn: [], hand: [], roster: [[],[],[],[],[]], tender: 0 },
+  cpu: { deck: [], stock: [], backlog: [], burn: [], hand: [], roster: [[],[],[],[],[]], tender: 0 },
 
   sel: {
-    // hunt
     monster: null,
     hunters: new Set(),
-
-    // trade
     tradeSupply: new Set(),
     tradeHunters: new Set(),
-
-    // restock
     restock: null
   },
 

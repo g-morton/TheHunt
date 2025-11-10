@@ -22,15 +22,17 @@ export function render(){
 
   renderPile('cpu-deck', State.cpu.deck, true);
   renderPile('cpu-burn', State.cpu.burn, false);
+  renderPile('cpu-stock', State.cpu.stock, true);
+  renderPile('cpu-backlog', State.cpu.backlog, false);
 
-  // registers
-  renderRegister('player-register', State.you.register, 'you');
-  renderRegister('cpu-register',    State.cpu.register, 'cpu');
+  // rosters
+  renderRoster('player-roster', State.you.roster, 'you');
+  renderRoster('cpu-roster',    State.cpu.roster, 'cpu');
 
   // hands
   renderHand('player-hand', State.you.hand);
-  renderHand('cpu-hand',    State.cpu.hand);
-  renderCpuHand('cpu-hand');
+  //renderHand('cpu-hand',    State.cpu.hand);
+  renderCpuHand('cpu-hand', State.cpu.hand);
 
   // scores / tender
   const youT = byId('tender-you');
@@ -62,11 +64,11 @@ function renderPile(rootId, pile, faceDown){
   }
   const badge = document.createElement('div');
   badge.className = 'count-badge';
-  badge.textContent = String(count);
+  badge.textContent = String(count).toUpperCase();
   root.appendChild(badge);
 }
 
-export function renderRegister(rootId, stacks, side){
+export function renderRoster(rootId, stacks, side){
   const root = document.getElementById(rootId);
   if (!root) return;
   root.innerHTML = '';
@@ -123,11 +125,11 @@ export function renderRegister(rootId, stacks, side){
         State.sel.monster.idx === i){
       if (cardNodeEl) cardNodeEl.classList.add('selected');
     }
-    // trade: multiple hunters in player's register
+    // trade: multiple hunters in player's roster
     if (side === 'you' && State.sel.tradeHunters.has(i)){
       if (cardNodeEl) cardNodeEl.classList.add('selected');
     }
-    // restock: single supply in player's register
+    // restock: single supply in player's roster
     if (side === 'you' && State.sel.restock &&
         State.sel.restock.side === side &&
         State.sel.restock.idx === i){
@@ -253,27 +255,32 @@ export function renderHand(rootId, cards){
 }
 
 
-export function renderCpuHand(rootId) {
+export function renderCpuHand(rootId, cards) {
   const root = document.getElementById(rootId);
   if (!root) return;
 
-  const count = (State.cpu && Array.isArray(State.cpu.hand))
-    ? State.cpu.hand.length
-    : 0;
-
+  const count = Array.isArray(cards) ? cards.length : 0;
   root.innerHTML = '';
 
-  // show 1 face-down card if there are any
-  if (count > 0) {
+  if (count === 0) {
+    return;
+  }
+
+  // show up to 7 backs so it doesn't get too wide
+  const maxVisible = Math.min(count, 7);
+  for (let i = 0; i < maxVisible; i++) {
     const back = document.createElement('div');
     back.className = 'cpu-card-back';
     root.appendChild(back);
-
-    const badge = document.createElement('div');
-    badge.className = 'cpu-hand-badge';
-    badge.textContent = count;
-    root.appendChild(badge);
   }
+
+  // badge with actual count
+  /*
+  const badge = document.createElement('div');
+  badge.className = 'cpu-hand-badge';
+  badge.textContent = count;
+  root.appendChild(badge);
+  */
 }
 
 // --- centralised card rendering -----------------------------------------

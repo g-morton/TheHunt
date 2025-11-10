@@ -16,7 +16,7 @@
   --pile-bg:#0d1422;
   --pile-border:#283046;
   --gap:12px;
-  --card-w:120px;
+  --card-w:100px;
   --card-h:calc(var(--card-w)*1.45);
 }
 *{box-sizing:border-box}
@@ -37,8 +37,10 @@ body{
   padding:var(--gap);
   height:100vh;
 }
+
+
 .board-col{display:flex;flex-direction:column;gap:var(--gap);min-width:0}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px}
+.topbar{display:flex;align-items:center;justify-content:center;padding:8px 12px}
 .brand{margin:0;font-size:40px;font-weight:800;letter-spacing:2px;color:#9aa3ad; font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;}
 .btn{
   padding:10px 14px;
@@ -57,6 +59,9 @@ body{
   display: none;           /* hidden by default */
 }
 
+
+
+
 .actionbar.show {display:flex;flex-direction:column;align-items:center;background:linear-gradient(180deg,#0000,#0004);border-top:1px solid var(--panel-border);padding:12px;gap:8px}
 .turn-pill{
   background:var(--panel-bg);
@@ -73,8 +78,8 @@ body{
   color:#eee;
   text-shadow:0 0 4px #000;
 }
-.phases{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:720px;gap:6px}
-.phase{
+.phases{display:flex;justify-content:space-between;align-items:center;width:100%;gap:6px}
+.phase, .phase-foil-pass{
   flex:1;
   padding:10px 6px;
   background:#111820;
@@ -86,10 +91,19 @@ body{
   transition:all .15s ease;
   cursor:pointer;
   text-align:center;
+  margin-left: 15px;
+  margin-right: 15px;
 }
 .phase.active{color:#fff;background:#1a2433;transform: scale(1.30);}
 .phase.ready{outline:2px solid var(--accent);outline-offset:2px}
 .phase:hover{border-color:#555f6b;color:#ccc}
+.phase-foil-pass {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-size: x-large;
+  padding: 12px;
+}
+
 .arrow{
     background: #0008;
     color: #d7dde7;
@@ -110,7 +124,7 @@ body{
 .band.player{background:var(--player-bg)}
 .band .band-inner{padding:12px;background:linear-gradient(180deg,#0000,#0002 25%,#0003)}
 .band,
-.register,
+.roster,
 .hand {
   overflow: visible;   /* was the problem before */
   position: relative;
@@ -125,11 +139,17 @@ body{
 .cpu-matrix{display:grid;grid-template-columns:min-content 1fr min-content;gap:var(--gap);align-items:start}
 .player-matrix{display:grid;grid-template-columns:min-content 1fr min-content;grid-template-rows:auto auto;gap:var(--gap);align-items:start}
 .player-matrix .left-piles{grid-column:1;grid-row:1 / span 2;display:flex;flex-direction:column;gap:var(--gap)}
-.player-matrix #player-register{grid-column:2;grid-row:1}
+.player-matrix #player-roster{grid-column:2;grid-row:1}
 .player-matrix .right-piles{grid-column:3;grid-row:1 / span 2;display:flex;flex-direction:column;gap:var(--gap)}
 .player-matrix #player-hand{grid-column:2;grid-row:2}
+.right-piles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);  /* ✅ adds space between STOCK and BACKLOG */
+  align-items: center;
+}
 
-.register {
+.roster {
   position: relative;
   background: color-mix(in srgb,var(--player-surface) 88%,black 0%);
   border: 1px dashed var(--pile-border);
@@ -139,18 +159,18 @@ body{
   grid-template-columns: repeat(5, var(--card-w));
   gap: var(--gap);
 }
-.cpu .register{background:color-mix(in srgb,var(--cpu-surface) 88%,black 0%)}
+.cpu .roster{background:color-mix(in srgb,var(--cpu-surface) 88%,black 0%)}
 .hand{
   position:relative;
   display:flex;
   gap:var(--gap);
   padding:10px;
   flex-wrap:wrap;
-  min-height:calc(var(--card-h) + 50px);
+  min-height:calc(var(--card-h) + 40px);
 }
-#player-register::after,
-#cpu-register::after,
-#player-hand::after{
+#player-roster::after,
+#cpu-roster::after,
+#player-hand::after, #cpu-hand::after{
   position:absolute;
   bottom:6px;
   left:50%;
@@ -164,8 +184,8 @@ body{
   padding:2px 8px;
   pointer-events:none;
 }
-#player-register::after{content:'REGISTER'}
-#cpu-register::after{content:'REGISTER'}
+#player-roster::after{content:'ROSTER'}
+#cpu-roster::after{content:'ROSTER'}
 #player-hand::after{content:'HAND'}
 
 .pile.slot{
@@ -196,11 +216,12 @@ body{
   pointer-events:none;
 }
 #player-deck::after{content:'DECK'}
-#player-stock::after{content:'stock'}
-#player-backlog::after{content:'backlog'}
+#player-stock::after{content:'STOCK'}
+#player-backlog::after{content:'BACKLOG'}
 #player-burn::after{content:'BURN'}
 #cpu-deck::after{content:'DECK'}
 #cpu-burn::after{content:'BURN'}
+#cpu-hand::after{content:'HAND'}
 
 .count-badge{
   position:absolute;
@@ -215,7 +236,7 @@ body{
   z-index: 10;
   pointer-events:none;
 }
-.register .stack-count{
+.roster .stack-count{
   position:absolute;
   top:-20px;
   left:-10px;
@@ -249,7 +270,7 @@ body{
 
 .card.is-hovered,
 .card:hover {
-  transform: scale(1.5);
+  transform: scale(2);
   z-index: 10;
   box-shadow: 0 12px 26px rgba(0,0,0,.4);
 }
@@ -402,6 +423,60 @@ body{
   border: 2px solid rgba(255,80,80,0.6);
   z-index: 999;
 }
+
+/* center column in CPU band: stack roster + hand */
+.cpu-matrix .cpu-center {
+  display: flex;
+  flex-direction: column;
+}
+
+
+/* one back-of-card + badge (we'll render via JS) */
+.cpu-hand .cpu-card-back {
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: 12px;
+  background-image: url('./images/back.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border: 1px solid #1f2937;
+  box-shadow: inset 0 0 10px rgba(0,0,0,.4);
+}
+
+.cpu-hand .cpu-hand-badge {
+  position: absolute;
+  top: 4px;
+  right: -10px;
+  background: #d64242;
+  color: #fff;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+#cpu-stock_ {
+  position: relative;
+  background-image: url('./images/back.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border: 1px solid #1f2937;
+  box-shadow: inset 0 0 10px rgba(0,0,0,.4);
+}
+
+#cpu-stock::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: rgba(0,0,0,.25);
+}
+/* labels for new CPU piles */
+#cpu-stock::after { content: 'STOCK'; }
+#cpu-backlog::after { content: 'BACKLOG'; }
 
 
 @media (max-width:1600px){:root{--card-w:106px}}

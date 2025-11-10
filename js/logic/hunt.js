@@ -44,6 +44,7 @@ export function executeHunt() {
   const hunters    = Array.from(hunterSet);
   const monsterSel = State.sel.monster;
 
+  if (!State.beginner) {
   // 1) CPU FOIL CHECK stays the same...
   const foilResult = tryCpuFoil(hunters);
   if (foilResult) {
@@ -69,12 +70,13 @@ export function executeHunt() {
     updateHuntReadiness();
     return;
   }
+}
 
   // 2) Normal hunt resolution
   const monsterStack =
     monsterSel.side === 'you'
-      ? State.you.register[monsterSel.idx]
-      : State.cpu.register[monsterSel.idx];
+      ? State.you.roster[monsterSel.idx]
+      : State.cpu.roster[monsterSel.idx];
 
   const monsterCard = monsterStack[monsterStack.length - 1];
 
@@ -82,7 +84,8 @@ export function executeHunt() {
   hunters.forEach(h => {
     const idx = State.you.hand.indexOf(h);
     if (idx >= 0) State.you.hand.splice(idx, 1);
-    State.you.backlog.push(h);
+    //State.you.backlog.push(h);
+    State.you.burn.push(h);
   });
 
   // remove monster from board

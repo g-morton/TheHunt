@@ -8,7 +8,7 @@ export function isRestockReady(){
 export function executeRestock(){
   const sel = State.sel.restock;
   if (!sel) return;
-  const stack = State.you.register[sel.idx];
+  const stack = State.you.roster[sel.idx];
   const card  = stack && stack[stack.length - 1];
   if (!card){
     State.sel.restock = null;
@@ -17,7 +17,7 @@ export function executeRestock(){
   stack.pop();
   State.you.backlog.push(card);
 
-  log(`<p class='you'>Restock: took <strong>${card.name}</strong> from your Register and moved it to backlog.</p>`);
+  log(`<p class='you'>Restock: took <strong>${card.name}</strong> from your Roster and sent it to backlog.</p>`);
 
   State.sel.restock = null;
 

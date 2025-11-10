@@ -53,10 +53,10 @@ function shuffle(arr){
   return arr;
 }
 
-function leastFilledRegisterIndex(board){
+function leastFilledRosterIndex(board){
   let bestIdx = 0;
   let bestCount = Infinity;
-  board.register.forEach((stack, i)=>{
+  board.roster.forEach((stack, i)=>{
     const len = stack.length;
     if (len < bestCount){
       bestCount = len;
@@ -66,64 +66,112 @@ function leastFilledRegisterIndex(board){
   return bestIdx;
 }
 
-function placeIntoRegister(card, side='cpu'){
+function placeIntoRoster(card, side='cpu'){
   const board = side === 'cpu' ? State.cpu : State.you;
-  const idx = leastFilledRegisterIndex(board);
-  board.register[idx].push(card);
+  const idx = leastFilledRosterIndex(board);
+  board.roster[idx].push(card);
 }
 
 /* ------------------------------- CPU phases ------------------------------- */
 
-function cpuHunt(){
+function cpuHunt() {
   const cpu = State.cpu;
   const cpuHunters = cpu.hand.filter(c => c.t === TYPES.HUNTER);
 
   log("<p class='cpu'>🗡️ Hunt phase</p>");
 
-  // find a target monster (same as before)
+  // 1) find a target monster (prefer player's)
   let target = null;
   let targetSide = null;
   let targetIdx = -1;
 
-  // prefer player's monsters
-  State.you.register.forEach((stack, i) => {
+  // look at player's roster first
+  State.you.roster.forEach((stack, i) => {
     if (!stack.length) return;
     const top = stack[stack.length - 1];
-    if (top.t === TYPES.MONSTER){
-      if (!target || top.power < target.power){
-        target = top; targetSide = 'you'; targetIdx = i;
+    if (top.t === TYPES.MONSTER) {
+      if (!target || top.power < target.power) {
+        target = top;
+        targetSide = 'you';
+        targetIdx = i;
       }
     }
   });
 
-  // then own monsters
-  if (!target){
-    State.cpu.register.forEach((stack, i) => {
+  // if none on player, look at CPU's own roster
+  if (!target) {
+    State.cpu.roster.forEach((stack, i) => {
       if (!stack.length) return;
       const top = stack[stack.length - 1];
-      if (top.t === TYPES.MONSTER){
-        if (!target || top.power < target.power){
-          target = top; targetSide = 'cpu'; targetIdx = i;
+      if (top.t === TYPES.MONSTER) {
+        if (!target || top.power < target.power) {
+          target = top;
+          targetSide = 'cpu';
+          targetIdx = i;
         }
       }
     });
   }
 
-  if (!target){
+  if (!target) {
     log("<p class='phase-step cpu'>No monsters to hunt — skipping.</p>");
     return;
   }
 
-  const totalP = cpuHunters.reduce((s,c)=> s + (c.power || 0), 0);
-  if (totalP < (target.power || 0)){
-    log(`<p class='phase-step cpu'>Hunters total P${totalP} &lt; ${target.name} (P${target.power}) — skipping.</p>`);
+  // 2) check power
+  const totalP = cpuHunters.reduce((s, c) => s + (c.power || 0), 0);
+  if (totalP < (target.power || 0)) {
+    log(
+      `<p class='phase-step cpu'>Hunters total P${totalP} &lt; ${target.name} (P${target.power}) — skipping.</p>`
+    );
     return;
   }
 
-  // --- NEW: create an interrupt for the player to foil ---
+  // 3) BEGINNER MODE: just do the hunt right now, no foil / prompt
+  if (State.beginner) {
+    const victimStacks =
+      targetSide === 'you' ? State.you.roster : State.cpu.roster;
+    const stack = victimStacks[targetIdx];
+    const monster = stack.pop();
+
+    // burn monster to owner
+    if (targetSide === 'you') {
+      State.you.burn.push(monster);
+      log(
+        `<p class='phase-step cpu'>⚔️ CPU hunted YOUR <strong>${monster.name}</strong> (P${monster.power}).</p>`
+      );
+    } else {
+      State.cpu.burn.push(monster);
+            log(
+        `<p class='phase-step cpu'>⚔️ CPU hunted own <strong>${monster.name}</strong> (P${monster.power}).</p>`
+      );
+    }
+
+    // burn all CPU hunters used
+    cpuHunters.forEach(h => {
+      const ix = State.cpu.hand.indexOf(h);
+      if (ix > -1) {
+        State.cpu.hand.splice(ix, 1);
+        State.cpu.burn.push(h);
+      }
+    });
+
+    // award tender to CPU (your player version now awards from any hunt)
+    const gain = Number(monster.tender || 0);
+    if (gain > 0) {
+      State.cpu.tender = Number(State.cpu.tender || 0) + gain;
+    }
+
+
+    // update UI
+    window.dispatchEvent(new CustomEvent('stateChanged'));
+    return;
+  }
+
+  // 4) NORMAL MODE: create an interrupt so player can FOIL or PASS
   State.interrupt = {
     type: 'cpu-hunt-foil',
-    cpuHunters: cpuHunters.slice(), // copy
+    cpuHunters: cpuHunters.slice(),
     target,
     targetSide,
     targetIdx
@@ -132,14 +180,15 @@ function cpuHunt(){
   log(`
     <p class='phase-step cpu'>
       🤖 CPU is hunting <strong>${target.name}</strong> (P${target.power})<br>
-      using: ${cpuHunters.map(h => `${h.name} (P${h.power||0}, F${h.foil||0})`).join(', ')}<br>
+      using: ${cpuHunters
+        .map(h => `${h.name} (P${h.power || 0}, F${h.foil || 0})`)
+        .join(', ')}<br>
       ❓ Player may FOIL or PASS.
     </p>
   `);
 
+  // wake the UI so it shows PASS button
   window.dispatchEvent(new CustomEvent('stateChanged'));
-
-  // do NOT resolve yet – wait for player to respond
 }
 
 
@@ -188,7 +237,7 @@ export async function resumeCpuHuntFromInterrupt(playerFoilCard = null){
   }
 
   // PASS / or invalid foil → resolve hunt normally
-  const victimStacks = (targetSide === 'you') ? State.you.register : State.cpu.register;
+  const victimStacks = (targetSide === 'you') ? State.you.roster : State.cpu.roster;
   const stack = victimStacks[targetIdx];
   const monster = stack.pop();
 
@@ -242,7 +291,7 @@ function cpuTrade(){
 function cpuTryTrade(){
   const cpu = State.cpu;
   const hand = cpu.hand || [];
-  const register = cpu.register || [];
+  const roster = cpu.roster || [];
 
   // supplies in hand
   const supplies = hand.filter(c => c.t === TYPES.SUPPLY);
@@ -250,9 +299,9 @@ function cpuTryTrade(){
 
   const wallet = countSupplies(supplies);
 
-  // find hunters on top of CPU register stacks
+  // find hunters on top of CPU roster stacks
   const candidateHunters = [];
-  register.forEach((stack, idx) => {
+  roster.forEach((stack, idx) => {
     if (!stack || !stack.length) return;
     const top = stack[stack.length - 1];
     if (top.t === TYPES.HUNTER) {
@@ -292,8 +341,8 @@ function cpuTryTrade(){
     }
   });
 
-  // take hunter from register → to backlog (so CPU draws it later)
-  register[chosen.stackIndex].pop();
+  // take hunter from roster → to backlog (so CPU draws it later)
+  roster[chosen.stackIndex].pop();
   cpu.backlog.push(chosen.card);
 
   log(
@@ -441,18 +490,18 @@ function canAffordHunter(wallet, requires){
 
 function cpuRestock(){
   log("<p class='cpu'>📦 Restock phase</p>");
-  const regs = State.cpu.register;
+  const regs = State.cpu.roster;
   for (let i = 0; i < regs.length; i++){
     const stack = regs[i];
     const top = stack[stack.length - 1];
     if (top && top.t === TYPES.SUPPLY){
       stack.pop();
       State.cpu.backlog.push(top);
-      log(`<p class='phase-step cpu'>Restocked ${top.name} from Register to backlog.</p>`);
+      log(`<p class='phase-step cpu'>Restocked ${top.name} from Roster to backlog.</p>`);
       return;
     }
   }
-  log("<p class='phase-step cpu'>No supply on register — skipping.</p>");
+  log("<p class='phase-step cpu'>No supply on roster — skipping.</p>");
 }
 
 function reshufflebacklogIntostockCpu(){
@@ -473,26 +522,26 @@ function cpuDrawOneIntoHand(){
   if (!card) return false;
 
   if (card.t === TYPES.MONSTER){
-    placeIntoRegister(card, 'cpu');
-    log(`<p class='phase-step cpu'>Drew Monster ${card.name} → CPU Register.</p>`);
+    placeIntoRoster(card, 'cpu');
+    log(`<p class='phase-step cpu'>Drew Monster ${card.name} → CPU Roster.</p>`);
   } else {
     State.cpu.hand.push(card);
   }
   return true;
 }
 
-function cpuRegisterRefresh(){
+function cpuRosterRefresh(){
   for (let n = 0; n < 5; n++){
     if (!State.cpu.deck.length) break;
     const card = State.cpu.deck.pop();
-    const idx = n % State.cpu.register.length;
-    State.cpu.register[idx].push(card);
+    const idx = n % State.cpu.roster.length;
+    State.cpu.roster[idx].push(card);
   }
-  log("<p class='phase-step cpu'>Register refreshed from Deck.</p>");
+  log("<p class='phase-step cpu'>Roster refreshed from Deck.</p>");
 }
 
 function cpubacklog(){
-  log("<p class='cpu'>🗑️ backlog phase</p>");
+  log("<p class='cpu'>🗑️ Backlog phase</p>");
   log("<p class='phase-step cpu'>No backlog this turn.</p>");
 }
 
@@ -502,7 +551,7 @@ function cpuRefresh(){
     const ok = cpuDrawOneIntoHand();
     if (!ok) break;
   }
-  cpuRegisterRefresh();
+  cpuRosterRefresh();
   log(`<p class='phase-step cpu'>Refresh complete. Hand: ${State.cpu.hand.length} cards.</p>`);
 }
 
@@ -518,11 +567,11 @@ export async function runCpuTurn(){
   log(`<p class='turn-header cpu'>TURN ${State.turnCount} — <strong>CPU TURN</strong></p>`);
 
   // HUNT
-  highlightCpuZone('cpu-register');
+  highlightCpuZone('cpu-roster');
   await sleep(PAINT_DELAY);    // let the highlight show
   cpuHunt();
   await sleep(CPU_DELAY);      // keep it visible so player can read log
-  unhighlightCpuZone('cpu-register');
+  unhighlightCpuZone('cpu-roster');
 
     // if hunt created an interrupt, stop here; UI will resume via resumeCpuHuntFromInterrupt
   if (State.interrupt && State.interrupt.type === 'cpu-hunt-foil') {
@@ -530,25 +579,25 @@ export async function runCpuTurn(){
   }
 
   // TRADE
-  highlightCpuZone('cpu-register');
+  highlightCpuZone('cpu-roster');
   await sleep(PAINT_DELAY);
   cpuTrade();
   await sleep(CPU_DELAY);
-  unhighlightCpuZone('cpu-register');
+  unhighlightCpuZone('cpu-roster');
 
   // RESTOCK
-  highlightCpuZone('cpu-register');
+  highlightCpuZone('cpu-roster');
   await sleep(PAINT_DELAY);
   cpuRestock();
   await sleep(CPU_DELAY);
-  unhighlightCpuZone('cpu-register');
+  unhighlightCpuZone('cpu-roster');
 
-  // backlog (no visible backlog, reuse register)
-  highlightCpuZone('cpu-register');
+  // backlog (no visible backlog, reuse roster)
+  highlightCpuZone('cpu-roster');
   await sleep(PAINT_DELAY);
   cpubacklog();
   await sleep(CPU_DELAY);
-  unhighlightCpuZone('cpu-register');
+  unhighlightCpuZone('cpu-roster');
 
   // REFRESH
   highlightCpuZone('cpu-deck');

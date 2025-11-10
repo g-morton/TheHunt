@@ -8,11 +8,11 @@ import { resumeCpuHuntFromInterrupt } from '../logic/cpu.js'; // ← this was mi
 import { log } from '../core/log.js';
 
 const PHASE_HINTS = {
-  hunt:    'Select one or more hunters, then pick a monster in the register to hunt.',
-  trade:   'Select hunters in your register and supply in your hand to complete a trade.',
-  restock: 'Select a supply card from your register to restock your hand.',
-  backlog: 'You may choose cards in your hand to backlog this turn.',
-  refresh: 'Refresh your hand and register or advance the turn.',
+  hunt:    'Select one or more hunters, then pick a monster in the roster to hunt.',
+  trade:   'Select hunters in your roster and supply in your hand to complete a trade.',
+  restock: 'Select a supply card from your roster to restock your hand.',
+  backlog: 'You may choose cards in your hand to send to your backlog.',
+  refresh: 'Refresh your hand and roster or advance the turn.',
   end:     'Refresh or end your turn when you have completed your actions.',
   default: 'Choose an action to continue.'
 };
@@ -131,9 +131,9 @@ const foilPassBtn = (() => {
     const hint = document.getElementById('phase-hint');
     btn = document.createElement('button');
     btn.id = 'btn-foil-pass';
-    btn.textContent = 'PASS';
+    btn.textContent = 'PASS?';
     btn.style.display = 'none';
-    btn.className = 'phase';
+    btn.className = 'phase-foil-pass';
     if (hint && hint.parentNode) {
       hint.parentNode.appendChild(btn);
     } else {
