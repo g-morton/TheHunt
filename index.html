@@ -21,10 +21,11 @@
           <div class="cpu-matrix">
             <div class="left-piles">
               <div id="cpu-deck" class="pile slot"></div>
+              <div id="cpu-burn" class="pile slot"></div>
             </div>
             <div id="cpu-register" class="register"></div>
+              <div id="cpu-hand" class="pile slot"></div>
             <div class="right-piles">
-              <div id="cpu-burn" class="pile slot"></div>
             </div>
           </div>
         </div>
@@ -41,8 +42,8 @@
             </div>
             <div id="player-register" class="register"></div>
             <div class="right-piles">
-              <div id="player-archive" class="pile slot"></div>
-              <div id="player-discard" class="pile slot"></div>
+              <div id="player-stock" class="pile slot"></div><!--Was archive, now stock-->
+              <div id="player-backlog" class="pile slot"></div><!--Was discard, now backlog-->
             </div>
             <div id="player-hand" class="hand"></div>
           </div>
@@ -59,8 +60,8 @@
           <span class="arrow" data-phase="trade">or skip</span>
           <button class="phase" data-phase="restock" id="btn-restock">Restock</button>
           <span class="arrow" data-phase="restock">or skip</span>
-          <button class="phase" data-phase="discard" id="btn-discard">Discard</button>
-          <span class="arrow" data-phase="discard">or skip</span>
+          <button class="phase" data-phase="backlog" id="btn-backlog">backlog</button>
+          <span class="arrow" data-phase="backlog">or skip</span>
           <button class="phase" data-phase="refresh"     id="btn-refresh">REFRESH</button>
         </div>
         <div id="phase-hint" class="phase-hint"></div>

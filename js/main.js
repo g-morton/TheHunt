@@ -111,8 +111,8 @@ export function startNewGame(){
   State.turn = 'you';
   State.phase = 'hunt';
   State.readyPhase = null;
-  State.you = { deck:[], archive:[], discard:[], burn:[], hand:[], register:[[],[],[],[],[]], tender:0 };
-  State.cpu = { deck:[], archive:[], discard:[], burn:[], hand:[], register:[[],[],[],[],[]], tender:0 };
+  State.you = { deck:[], stock:[], backlog:[], burn:[], hand:[], register:[[],[],[],[],[]], tender:0 };
+  State.cpu = { deck:[], stock:[], backlog:[], burn:[], hand:[], register:[[],[],[],[],[]], tender:0 };
   State.sel = {
     monster: null,
     hunters: new Set(),
@@ -120,7 +120,7 @@ export function startNewGame(){
     tradeHunters: new Set(),
     restock: null
   };
-  State.selectedToDiscard = new Set();
+  State.selectedTobacklog = new Set();
 
   const catalog  = State.cards.slice();
   const YOU_COUNTS = { monsters: 20, hunters: 26, supplies: 14 }; // 60
@@ -140,7 +140,7 @@ export function startNewGame(){
       1️⃣ <strong>Hunt</strong> - Select Hunters, then a Monster to hunt, ensuring you have enough⚡to win.<br>
       2️⃣ <strong>Trade</strong> - Use Supply, Kit, Script & Treacle to buy Hunters.<br>
       3️⃣ <strong>Restock</strong> - Choose 1 Supply from Register to keep.<br>
-      4️⃣ <strong>Discard</strong> - Drop what you don’t need.<br>
+      4️⃣ <strong>backlog</strong> - Drop what you don’t need.<br>
       5️⃣ <strong>Refresh</strong> - Refresh your Hand and Register, then begin again.<br>
       <br>
       <strong>CAREFUL!:</strong> <br>
@@ -157,9 +157,9 @@ export function startNewGame(){
   buildRegisterFromDeck('cpu', 5);
   log("<p class='log-line' 5 cards drawn into each player's Register.</p>");
 
-  // 2) player 10 to archive
-  State.you.archive.push(...draw(State.you.deck, 10));
-  log("<p class='log-line you'>→ 10 cards drawn into your Archive.</p>");
+  // 2) player 10 to stock
+  State.you.stock.push(...draw(State.you.deck, 10));
+  log("<p class='log-line you'>→ 10 cards drawn into your stock.</p>");
 
   // 3) player 5 to hand (monsters auto-register)
   const firstFive = draw(State.you.deck, 5);
@@ -173,11 +173,11 @@ export function startNewGame(){
     log("<p class='log-line you'>→ No Monsters were drawn into your Hand.</p>");
   }
 
-  // ✅ CPU: 10 to archive, 5 to hand (monsters jump to its register too)
-  State.cpu.archive.push(...draw(State.cpu.deck, 10));
+  // ✅ CPU: 10 to stock, 5 to hand (monsters jump to its register too)
+  State.cpu.stock.push(...draw(State.cpu.deck, 10));
   const cpuFirstFive = draw(State.cpu.deck, 5);
   State.cpu.hand.push(...autoRegisterMonsters(cpuFirstFive, 'cpu'));
-  log("<p class='log-line cpu'>→ CPU drew its Archive and starting Hand.</p>");
+  log("<p class='log-line cpu'>→ CPU drew its stock and starting Hand.</p>");
 
   log("<p class='sys'><strong>Setup complete.</strong></p>");
 
@@ -190,7 +190,7 @@ export function startNewGame(){
 
 
 export function nextPhase(){
-  const order = ['hunt','trade','restock','discard','refresh'];
+  const order = ['hunt','trade','restock','backlog','refresh'];
   const i = order.indexOf(State.phase);
 
   // clear selections when leaving a phase
@@ -199,7 +199,7 @@ export function nextPhase(){
   State.sel.tradeSupply?.clear?.();
   State.sel.tradeHunters?.clear?.();
   State.sel.restock = null;
-  State.selectedToDiscard?.clear?.();
+  State.selectedTobacklog?.clear?.();
   State.readyPhase = null;
 
   State.phase = order[(i+1) % order.length];

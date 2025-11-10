@@ -82,7 +82,7 @@ export function executeHunt() {
   hunters.forEach(h => {
     const idx = State.you.hand.indexOf(h);
     if (idx >= 0) State.you.hand.splice(idx, 1);
-    State.you.discard.push(h);
+    State.you.backlog.push(h);
   });
 
   // remove monster from board

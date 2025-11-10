@@ -9,8 +9,8 @@ export const State = {
 
   you: {
     deck: [],
-    archive: [],
-    discard: [],
+    stock: [],
+    backlog: [],
     burn: [],
     hand: [],
     register: [ [], [], [], [], [] ],
@@ -19,8 +19,8 @@ export const State = {
 
   cpu: {
     deck: [],
-    archive: [],
-    discard: [],
+    stock: [],
+    backlog: [],
     burn: [],
     hand: [],
     register: [ [], [], [], [], [] ],
@@ -40,5 +40,5 @@ export const State = {
     restock: null
   },
 
-  selectedToDiscard: new Set()
+  selectedTobacklog: new Set()
 };

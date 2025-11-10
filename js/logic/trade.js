@@ -84,24 +84,24 @@ export function executeTrade(){
     return;
   }
 
-  // pay supplies -> discard
+  // pay supplies -> backlog
   supplies.forEach(s => {
     const ix = State.you.hand.indexOf(s);
     if (ix > -1){
       State.you.hand.splice(ix,1);
-      State.you.discard.push(s);
+      State.you.backlog.push(s);
     }
   });
 
-  // move hunters -> discard (per latest rule)
+  // move hunters -> backlog (per latest rule)
   selHunters.forEach(h => {
     const stack = State.you.register[h.idx];
     stack.pop();
-    State.you.discard.push(h.card);
+    State.you.backlog.push(h.card);
   });
 
   State.sel.tradeSupply.clear();
   State.sel.tradeHunters.clear();
 
-  log("<p class='you'>Trade successful: Hunters paid for and moved to Discard. Supply discarded.</p>");
+  log("<p class='you'>Trade successful: Hunters paid for and moved to backlog. Supply backloged.</p>");
 }

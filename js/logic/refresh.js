@@ -11,13 +11,13 @@ function shuffle(arr) {
   return arr;
 }
 
-function reshuffleDiscardIntoArchive(side = 'you') {
+function reshufflebacklogIntostock(side = 'you') {
   const board = side === 'you' ? State.you : State.cpu;
-  if (!board.discard.length) return false;
-  board.archive.push(...board.discard);
-  board.discard.length = 0;
-  shuffle(board.archive);
-  log("<p class='sys'>Archive was empty — Discard was shuffled back into Archive.</p>");
+  if (!board.backlog.length) return false;
+  board.stock.push(...board.backlog);
+  board.backlog.length = 0;
+  shuffle(board.stock);
+  log("<p class='sys'>stock was empty — backlog was shuffled back into stock.</p>");
   return true;
 }
 
@@ -39,15 +39,15 @@ function placeIntoRegister(card, side = 'you') {
   board.register[idx].push(card);
 }
 
-function drawOneFromArchiveToHand(side = 'you') {
+function drawOneFromstockToHand(side = 'you') {
   const board = side === 'you' ? State.you : State.cpu;
 
-  if (!board.archive.length) {
-    const ok = reshuffleDiscardIntoArchive(side);
+  if (!board.stock.length) {
+    const ok = reshufflebacklogIntostock(side);
     if (!ok) return false;
   }
 
-  const card = board.archive.pop();
+  const card = board.stock.pop();
   if (!card) return false;
 
   if (card.t && card.t.toLowerCase() === 'monster') {
@@ -81,7 +81,7 @@ export function executeRefresh() {
 
   // 1) hand to 5
   while (board.hand.length < 5) {
-    const ok = drawOneFromArchiveToHand('you');
+    const ok = drawOneFromstockToHand('you');
     if (!ok) break;
   }
 

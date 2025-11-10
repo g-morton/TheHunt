@@ -3,7 +3,7 @@ import { State } from '../core/state.js';
 import { updateHuntReadiness, executeHunt, isHuntReady } from '../logic/hunt.js';
 import { isTradeReady, executeTrade } from '../logic/trade.js';
 import { isRestockReady, executeRestock } from '../logic/restock.js';
-import { isDiscardReady, executeDiscard } from '../logic/discard.js';
+import { isbacklogReady, executebacklog } from '../logic/backlog.js';
 import { resumeCpuHuntFromInterrupt } from '../logic/cpu.js'; // ← this was missing
 import { log } from '../core/log.js';
 
@@ -11,7 +11,7 @@ const PHASE_HINTS = {
   hunt:    'Select one or more hunters, then pick a monster in the register to hunt.',
   trade:   'Select hunters in your register and supply in your hand to complete a trade.',
   restock: 'Select a supply card from your register to restock your hand.',
-  discard: 'You may choose cards in your hand to discard this turn.',
+  backlog: 'You may choose cards in your hand to backlog this turn.',
   refresh: 'Refresh your hand and register or advance the turn.',
   end:     'Refresh or end your turn when you have completed your actions.',
   default: 'Choose an action to continue.'
@@ -24,7 +24,7 @@ const phaseButtons = {
   hunt:    document.getElementById('btn-hunt'),
   trade:   document.getElementById('btn-trade'),
   restock: document.getElementById('btn-restock'),
-  discard: document.getElementById('btn-discard'),
+  backlog: document.getElementById('btn-backlog'),
   refresh: document.getElementById('btn-end'),
 };
 
@@ -74,12 +74,12 @@ if (phaseButtons.restock){
   });
 }
 
-// DISCARD
-if (phaseButtons.discard){
-  phaseButtons.discard.addEventListener('click', ()=>{
-    if (State.turn === 'you' && State.phase === 'discard'){
-      if (isDiscardReady()){
-        executeDiscard();
+// backlog
+if (phaseButtons.backlog){
+  phaseButtons.backlog.addEventListener('click', ()=>{
+    if (State.turn === 'you' && State.phase === 'backlog'){
+      if (isbacklogReady()){
+        executebacklog();
         window.dispatchEvent(new CustomEvent('stateChanged'));
       }
     }
@@ -97,7 +97,7 @@ export function setPhaseButtons() {
     hunt:    isHuntReady(),
     trade:   isTradeReady(),
     restock: isRestockReady(),
-    discard: isDiscardReady(),
+    backlog: isbacklogReady(),
   };
 
   // if CPU is waiting for player to foil, show the prompt

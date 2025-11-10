@@ -283,21 +283,21 @@ function cpuTryTrade(){
 
   const chosen = affordable[0];
 
-  // pay: discard supplies used
+  // pay: backlog supplies used
   chosen.payPlan.forEach(card => {
     const i = cpu.hand.indexOf(card);
     if (i >= 0) {
       cpu.hand.splice(i, 1);
-      cpu.discard.push(card); // buying discards supply
+      cpu.backlog.push(card); // buying backlogs supply
     }
   });
 
-  // take hunter from register → to discard (so CPU draws it later)
+  // take hunter from register → to backlog (so CPU draws it later)
   register[chosen.stackIndex].pop();
-  cpu.discard.push(chosen.card);
+  cpu.backlog.push(chosen.card);
 
   log(
-    `<p class='phase-step cpu'>CPU traded ${chosen.payPlan.length} Supply to recruit <strong>${chosen.card.name}</strong> (to discard).</p>`
+    `<p class='phase-step cpu'>CPU traded ${chosen.payPlan.length} Supply to recruit <strong>${chosen.card.name}</strong> (to backlog).</p>`
   );
 
   return true;
@@ -447,29 +447,29 @@ function cpuRestock(){
     const top = stack[stack.length - 1];
     if (top && top.t === TYPES.SUPPLY){
       stack.pop();
-      State.cpu.discard.push(top);
-      log(`<p class='phase-step cpu'>Restocked ${top.name} from Register to Discard.</p>`);
+      State.cpu.backlog.push(top);
+      log(`<p class='phase-step cpu'>Restocked ${top.name} from Register to backlog.</p>`);
       return;
     }
   }
   log("<p class='phase-step cpu'>No supply on register — skipping.</p>");
 }
 
-function reshuffleDiscardIntoArchiveCpu(){
-  if (!State.cpu.discard.length) return false;
-  State.cpu.archive.push(...State.cpu.discard);
-  State.cpu.discard.length = 0;
-  shuffle(State.cpu.archive);
-  log("<p class='phase-step cpu'>Archive empty → shuffled discard back in.</p>");
+function reshufflebacklogIntostockCpu(){
+  if (!State.cpu.backlog.length) return false;
+  State.cpu.stock.push(...State.cpu.backlog);
+  State.cpu.backlog.length = 0;
+  shuffle(State.cpu.stock);
+  log("<p class='phase-step cpu'>stock empty → shuffled backlog back in.</p>");
   return true;
 }
 
 function cpuDrawOneIntoHand(){
-  if (!State.cpu.archive.length){
-    const ok = reshuffleDiscardIntoArchiveCpu();
+  if (!State.cpu.stock.length){
+    const ok = reshufflebacklogIntostockCpu();
     if (!ok) return false;
   }
-  const card = State.cpu.archive.pop();
+  const card = State.cpu.stock.pop();
   if (!card) return false;
 
   if (card.t === TYPES.MONSTER){
@@ -491,9 +491,9 @@ function cpuRegisterRefresh(){
   log("<p class='phase-step cpu'>Register refreshed from Deck.</p>");
 }
 
-function cpuDiscard(){
-  log("<p class='cpu'>🗑️ Discard phase</p>");
-  log("<p class='phase-step cpu'>No discard this turn.</p>");
+function cpubacklog(){
+  log("<p class='cpu'>🗑️ backlog phase</p>");
+  log("<p class='phase-step cpu'>No backlog this turn.</p>");
 }
 
 function cpuRefresh(){
@@ -543,10 +543,10 @@ export async function runCpuTurn(){
   await sleep(CPU_DELAY);
   unhighlightCpuZone('cpu-register');
 
-  // DISCARD (no visible discard, reuse register)
+  // backlog (no visible backlog, reuse register)
   highlightCpuZone('cpu-register');
   await sleep(PAINT_DELAY);
-  cpuDiscard();
+  cpubacklog();
   await sleep(CPU_DELAY);
   unhighlightCpuZone('cpu-register');
 
@@ -568,7 +568,7 @@ export async function runCpuTurn(){
   State.sel.tradeSupply?.clear?.();
   State.sel.tradeHunters?.clear?.();
   State.sel.restock = null;
-  State.selectedToDiscard?.clear?.();
+  State.selectedTobacklog?.clear?.();
   State.readyPhase = null;
 
   log(`<p class='turn-header you'>TURN ${State.turnCount} — <strong>YOUR TURN</strong></p>`);

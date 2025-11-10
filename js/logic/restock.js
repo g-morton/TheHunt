@@ -15,12 +15,12 @@ export function executeRestock(){
     return;
   }
   stack.pop();
-  State.you.discard.push(card);
+  State.you.backlog.push(card);
 
-  log(`<p class='you'>Restock: took <strong>${card.name}</strong> from your Register and moved it to Discard.</p>`);
+  log(`<p class='you'>Restock: took <strong>${card.name}</strong> from your Register and moved it to backlog.</p>`);
 
   State.sel.restock = null;
 
-  // auto-advance to Discard
+  // auto-advance to backlog
   window.dispatchEvent(new CustomEvent('advancePhase'));
 }

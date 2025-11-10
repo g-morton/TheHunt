@@ -16,8 +16,8 @@ export function render(){
 
   // piles
   renderPile('player-deck',    State.you.deck,    true);
-  renderPile('player-archive', State.you.archive, true);
-  renderPile('player-discard', State.you.discard, false);
+  renderPile('player-stock', State.you.stock, true);
+  renderPile('player-backlog', State.you.backlog, false);
   renderPile('player-burn',    State.you.burn,    false);
 
   renderPile('cpu-deck', State.cpu.deck, true);
@@ -30,6 +30,7 @@ export function render(){
   // hands
   renderHand('player-hand', State.you.hand);
   renderHand('cpu-hand',    State.cpu.hand);
+  renderCpuHand('cpu-hand');
 
   // scores / tender
   const youT = byId('tender-you');
@@ -196,12 +197,12 @@ export function renderHand(rootId, cards){
 
   const isHuntSel    = (State.turn === 'you' && State.phase === 'hunt');
   const isTradeSel   = (State.turn === 'you' && State.phase === 'trade');
-  const isDiscardSel = (State.turn === 'you' && State.phase === 'discard');
+  const isbacklogSel = (State.turn === 'you' && State.phase === 'backlog');
   const isRefreshSel = (State.turn === 'you' && State.phase === 'refresh');
 
   State.sel.hunters ??= new Set();
   State.sel.tradeSupply ??= new Set();
-  State.selectedToDiscard ??= new Set();
+  State.selectedTobacklog ??= new Set();
 
   (cards || []).forEach((c, i)=>{
     const node = cardNode(c);
@@ -232,12 +233,12 @@ export function renderHand(rootId, cards){
       });
     }
 
-    if (isDiscardSel){
+    if (isbacklogSel){
       node.style.cursor = 'pointer';
-      if (State.selectedToDiscard.has(c)) node.classList.add('selected');
+      if (State.selectedTobacklog.has(c)) node.classList.add('selected');
       node.addEventListener('click', ()=>{
-        if (State.selectedToDiscard.has(c)) State.selectedToDiscard.delete(c);
-        else State.selectedToDiscard.add(c);
+        if (State.selectedTobacklog.has(c)) State.selectedTobacklog.delete(c);
+        else State.selectedTobacklog.add(c);
         render();
         setPhaseButtons && setPhaseButtons();
       });
@@ -249,6 +250,30 @@ export function renderHand(rootId, cards){
 
     root.appendChild(node);
   });
+}
+
+
+export function renderCpuHand(rootId) {
+  const root = document.getElementById(rootId);
+  if (!root) return;
+
+  const count = (State.cpu && Array.isArray(State.cpu.hand))
+    ? State.cpu.hand.length
+    : 0;
+
+  root.innerHTML = '';
+
+  // show 1 face-down card if there are any
+  if (count > 0) {
+    const back = document.createElement('div');
+    back.className = 'cpu-card-back';
+    root.appendChild(back);
+
+    const badge = document.createElement('div');
+    badge.className = 'cpu-hand-badge';
+    badge.textContent = count;
+    root.appendChild(badge);
+  }
 }
 
 // --- centralised card rendering -----------------------------------------

@@ -196,8 +196,8 @@ body{
   pointer-events:none;
 }
 #player-deck::after{content:'DECK'}
-#player-archive::after{content:'ARCHIVE'}
-#player-discard::after{content:'DISCARD'}
+#player-stock::after{content:'stock'}
+#player-backlog::after{content:'backlog'}
 #player-burn::after{content:'BURN'}
 #cpu-deck::after{content:'DECK'}
 #cpu-burn::after{content:'BURN'}
