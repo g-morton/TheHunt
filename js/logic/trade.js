@@ -1,107 +1,174 @@
-// js/logic/trade.js
-import { State } from '../core/state.js';
+// js/logic/trade.js (V5 clean version)
+
+import { State, SIDES } from '../core/state.js';
+import { topOf, isSupply, isHunter } from './utils.js';
 import { log } from '../core/log.js';
 
-function normalizeReq(req){
-  if (!req) return {};
-  if (Array.isArray(req)){
-    const out = {};
-    req.forEach(r => out[r] = (out[r] || 0) + 1);
-    return out;
-  }
-  return { ...req };
-}
-function combinedRequirements(hunters){
-  const total = {};
-  hunters.forEach(h => {
-    const req = normalizeReq(h.requires);
-    for (const [k,v] of Object.entries(req)){
-      total[k] = (total[k] || 0) + v;
-    }
-  });
-  return total;
-}
-function countSupplies(supplies){
-  const have = {};
-  supplies.forEach(s => {
-    const tag = (s.tag || 'any').toLowerCase();
-    have[tag] = (have[tag] || 0) + 1;
-    have['any'] = (have['any'] || 0) + 1;
-  });
-  return have;
-}
-function findSelectedTradeHunters(){
-  const regs = State.you.roster;
-  const out = [];
-  (State.sel.tradeHunters || new Set()).forEach(idx => {
-    const stack = regs[idx];
-    const top = stack && stack[stack.length - 1];
-    if (top) out.push({ idx, card: top });
-  });
-  return out;
-}
-export function isTradeReady(){
-  const selHunters = findSelectedTradeHunters();
-  if (!selHunters.length) return false;
-  const hunterCards = selHunters.map(h => h.card);
-  const reqs = combinedRequirements(hunterCards);
-  const supplies = Array.from(State.sel?.tradeSupply || []);
-  const have = countSupplies(supplies);
 
-  for (const [type,need] of Object.entries(reqs)){
-    if (type === 'any') continue;
-    const haveCount = have[type.toLowerCase()] || 0;
-    if (haveCount < need) return false;
-  }
-  if (reqs.any){
-    if ((have['any'] || 0) < reqs.any) return false;
-  }
-  return true;
+import {
+  discardTrade
+} from './discard.js';
+
+
+function getSupplyType(card){
+  if (!card) return null;
+  // Use tag/name and normalise to lowercase for comparison
+  const raw = card.tag || card.name || null;
+  return raw ? String(raw).trim().toLowerCase() : null;
 }
+
+/**
+ * Normalise a hunter's requires field into a canonical form:
+ *  - case-insensitive keys
+ *  - supports shorthand numeric: requires: 2  => { any: 2 }
+ *  - supports "Any", "ANY", etc.: all treated as "any".
+ *
+ * Returns an object: { any: number, types: { kit: n, script: m, ... } }
+ */
+function normaliseRequires(rawReq){
+  const norm = { any: 0, types: {} };
+
+  if (rawReq == null){
+    return norm; // no explicit requirement
+  }
+
+  if (typeof rawReq === 'number'){
+    norm.any = rawReq;
+    return norm;
+  }
+
+  if (typeof rawReq !== 'object'){
+    return norm;
+  }
+
+  for (const [key, val] of Object.entries(rawReq)){
+    const amount = Number(val) || 0;
+    if (amount <= 0) continue;
+
+    const k = String(key).trim().toLowerCase();
+    if (k === 'any'){
+      norm.any += amount;
+    } else {
+      norm.types[k] = (norm.types[k] || 0) + amount;
+    }
+  }
+
+  return norm;
+}
+
+/**
+ * Do the given supply cards satisfy this hunter's requires?
+ *
+ * Rules:
+ *  - Specific type keys (e.g. "kit", "script") are matched case-insensitively
+ *  - "any" can be fulfilled by ANY remaining supplies after specific ones
+ *  - Extra supply is allowed (overpaying is fine)
+ *  - If requires is absent/empty, we just require at least 1 Supply
+ */
+export function suppliesMeetRequirements(hunter, supplies){
+  const rawReq = hunter?.requires;
+  const normReq = normaliseRequires(rawReq);
+
+  // If no specific requirement at all, just need at least one Supply
+  if (normReq.any === 0 && Object.keys(normReq.types).length === 0){
+    return supplies.length > 0;
+  }
+
+  // Count supplies by (lowercased) type
+  const counts = {};
+  for (const card of supplies){
+    const t = getSupplyType(card);
+    if (!t) continue;
+    counts[t] = (counts[t] || 0) + 1;
+  }
+
+  // First, meet specific type requirements
+  let usedSpecific = 0;
+  for (const [typeKey, needed] of Object.entries(normReq.types)){
+    const have = counts[typeKey] || 0;
+    if (have < needed){
+      return false; // not enough of a specific type
+    }
+    usedSpecific += needed;
+  }
+
+  // Then, check "any" requirement against leftover supplies
+  if (normReq.any > 0){
+    const totalSelected = supplies.length;
+    const remaining = totalSelected - usedSpecific;
+    if (remaining < normReq.any){
+      return false;
+    }
+  }
+
+  // Passed all checks; also ensure we used at least one Supply
+  return supplies.length > 0;
+}
+
+// -----------------------------------------------------
+// executeTrade()
+// Player chooses:
+//   - 1 Hunter from roster
+//   - 1 or more Supply from hand
+//
+// Result (V5 rules):
+//   - Hunter + Supply → BACKLOG
+//   - Roster slot becomes empty
+//
+// (Optional future enhancement: enforce costs from hunter.requires)
+// -----------------------------------------------------
 export function executeTrade(){
-  const selHunters = findSelectedTradeHunters();
-  if (!selHunters.length){
-    log("<p class='sys'>Trade failed: no hunters selected.</p>");
+  if (State.turn !== SIDES.YOU) return;
+
+  // 1) Selected supplies in HAND
+  const handSupplyIdx = Array.from(State.sel.hand)
+    .filter(i => isSupply(State.you.hand[i]));
+
+  // 2) Selected hunters in ROSTER (top card only)
+  const rosterHunters = Array.from(State.sel.roster)
+    .map(i => ({ i, card: topOf(State.you.roster[i]) }))
+    .filter(x => isHunter(x.card));
+
+  if (!handSupplyIdx.length || rosterHunters.length !== 1) return;
+
+  const { i: hunterSlot, card: hunterCard } = rosterHunters[0];
+
+  // Actual supply card objects for cost check
+  const supplyCards = handSupplyIdx.map(i => State.you.hand[i]);
+
+  // 3) Enforce requirements
+  if (!suppliesMeetRequirements(hunterCard, supplyCards)){
+    log(`<p class="you">Trade failed: selected Supply does not meet <strong>${hunterCard.name}</strong>'s requirements.</p>`);
     return;
   }
-  const hunterCards = selHunters.map(h => h.card);
-  const reqs = combinedRequirements(hunterCards);
-  const supplies = Array.from(State.sel?.tradeSupply || []);
-  const have = countSupplies(supplies);
 
-  // validate again
-  let ok = true;
-  for (const [type,need] of Object.entries(reqs)){
-    if (type === 'any') continue;
-    const haveCount = have[type.toLowerCase()] || 0;
-    if (haveCount < need) { ok = false; break; }
-  }
-  if (ok && reqs.any){
-    if ((have['any'] || 0) < reqs.any) ok = false;
-  }
-  if (!ok){
-    log("<p class='sys'>Trade failed: selected Supply doesn't meet Hunter requirements.</p>");
-    return;
-  }
-
-  // pay supplies -> backlog
-  supplies.forEach(s => {
-    const ix = State.you.hand.indexOf(s);
-    if (ix > -1){
-      State.you.hand.splice(ix,1);
-      State.you.backlog.push(s);
-    }
+  // 4) Move supplies from hand → backlog
+  const movedSupply = [];
+  handSupplyIdx.sort((a,b)=>b-a).forEach(i => {
+    movedSupply.push(State.you.hand.splice(i,1)[0]);
   });
 
-  // move hunters -> backlog (per latest rule)
-  selHunters.forEach(h => {
-    const stack = State.you.roster[h.idx];
+  // 5) Remove hunter from roster slot → backlog
+  const stack = State.you.roster[hunterSlot] || [];
+  if (stack.length && stack[stack.length - 1] === hunterCard){
     stack.pop();
-    State.you.backlog.push(h.card);
-  });
+  } else {
+    const pos = stack.indexOf(hunterCard);
+    if (pos >= 0) stack.splice(pos, 1);
+  }
 
-  State.sel.tradeSupply.clear();
-  State.sel.tradeHunters.clear();
+  State.you.backlog.push(hunterCard, ...movedSupply);
 
-  log("<p class='you'>Trade successful: Hunters and Supply sent to backlog.</p>");
+  log(`
+    <p class="you">
+      💱 Trade: You cycled <strong>${hunterCard.name}</strong> and 
+      ${movedSupply.length} Supply to your backlog.
+    </p>
+  `);
+
+  // 6) Clear selection + refresh UI
+  State.sel.hand.clear();
+  State.sel.roster.clear();
+  window.dispatchEvent(new CustomEvent('selectionChanged'));
+  window.dispatchEvent(new CustomEvent('stateChanged'));
 }

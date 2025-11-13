@@ -10,7 +10,7 @@
   <div class="app-shell">
     <section class="board-col">
       <header class="topbar">
-        <h1 class="brand">THE HUNT</h1>
+        <h1 class="brand">THE HUNT v5</h1>
         <button id="btn-newgame" class="btn ghost big">START NEW GAME</button>
           <input type="checkbox" id="beginner-mode" checked>
           Beginner
@@ -36,6 +36,13 @@
           <div class="right-piles">
             <div id="cpu-stock" class="pile slot"></div>
             <div id="cpu-backlog" class="pile slot"></div>
+
+                    <div class="score cpu">
+          <div class="label">CPU TENDER</div>
+          <div class="value" id="tender-cpu">0</div>
+        </div>
+
+            
           </div>
         </div>
       </div>
@@ -50,12 +57,18 @@
               <div id="player-deck" class="pile slot"></div>
               <div id="player-burn" class="pile slot"></div>
             </div>
-            <div id="player-roster" class="roster"></div>
+            <div id="roster" class="roster"></div>
             <div class="right-piles">
               <div id="player-stock" class="pile slot"></div>
               <div id="player-backlog" class="pile slot"></div>
+
+        <div class="score you">
+          <div class="label">PLAYER TENDER</div>
+          <div class="value" id="tender-you">0</div>
+        </div>
+
             </div>
-            <div id="player-hand" class="hand"></div>
+            <div id="hand" class="hand"></div>
           </div>
         </div>
       </section>
@@ -63,19 +76,20 @@
       <!-- PHASE BAR -->
       <footer class="actionbar">
         
+        
         <div class="phases">
+
           <div class="turn-pill" id="turn-pill">YOUR TURN</div>
-          <button class="phase" data-phase="hunt"    id="btn-hunt">Hunt</button>
-          <span class="arrow" data-phase="hunt">or Done</span>
-          <button class="phase" data-phase="trade"   id="btn-trade">Trade</button>
-          <span class="arrow" data-phase="trade">or Done</span>
-          <button class="phase" data-phase="restock" id="btn-restock">Restock</button>
-          <span class="arrow" data-phase="restock">or Done</span>
-          <button class="phase" data-phase="backlog" id="btn-backlog">Backlog</button>
-          <span class="arrow" data-phase="backlog">or Done</span>
-          <button class="phase" data-phase="refresh"     id="btn-refresh">Refresh</button>
+
+          <button class="phase" id="btn-hunt">Hunt</button>
+          <button class="phase" id="btn-trade">Trade</button>
+          <button class="phase" id="btn-resupply">Resupply</button>
+          <button class="phase" id="btn-cull">Cull</button>
+          <button class="phase" id="btn-endturn">I'm done</button>
         </div>
-        <div id="phase-hint" class="phase-hint"></div>
+        <div id="phase-hint" class="phase-hint">
+          Optional actions will highlight automatically based on card combos. Click I'm done to end your turn.
+        </div>
       </footer>
     </section>
 
@@ -85,18 +99,26 @@
         <div class="log-title">GAME LOG</div>
         <div id="log" class="log"></div>
       </div>
-      <div class="scoreboard">
-        <div class="score you">
-          <div class="label">PLAYER TENDER</div>
-          <div class="value" id="tender-you">0</div>
-        </div>
-        <div class="score cpu">
-          <div class="label">CPU TENDER</div>
-          <div class="value" id="tender-cpu">0</div>
-        </div>
-      </div>
     </aside>
   </div>
+
+
+<!-- Game Over Overlay -->
+<div id="game-over-overlay" class="game-over-overlay">
+  <div class="game-over-inner">
+    <div class="game-over-splatter"></div>
+    <h2 class="game-over-title">THE HUNT IS OVER</h2>
+    <p class="game-over-winner" id="game-over-winner"></p>
+    <p class="game-over-summary" id="game-over-summary">
+      Blood has been spilled. Decks are dry. Only one hunter walks away…
+    </p>
+    <div class="game-over-actions">
+      <button id="btn-play-again" class="btn primary">Play Again</button>
+      <button id="btn-close-overlay" class="btn">Close</button>
+    </div>
+  </div>
+</div>
+
 
   <script type="module" src="./js/main.js"></script>
 </body>

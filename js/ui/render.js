@@ -1,397 +1,341 @@
 // js/ui/render.js
-import { State } from '../core/state.js';
-import { TYPES } from '../data.js';
-import { setPhaseButtons } from './controls.js';
-import { updateHuntReadiness } from '../logic/hunt.js';
 
-function byId(id){ return document.getElementById(id); }
+import { State, SIDES, GAME } from '../core/state.js';
 
-export function render(){
-  // turn pill
-  const pill = byId('turn-pill');
-  if (pill){
-    pill.textContent = State.turn === 'you' ? 'YOUR TURN' : 'CPU TURN';
-    pill.classList.toggle('cpu', State.turn === 'cpu');
-  }
+function $(id){ return document.getElementById(id); }
+function el(tag, cls){ const n = document.createElement(tag); if (cls) n.className = cls; return n; }
 
-  // piles
-  renderPile('player-deck',    State.you.deck,    true);
-  renderPile('player-stock', State.you.stock, true);
-  renderPile('player-backlog', State.you.backlog, false);
-  renderPile('player-burn',    State.you.burn,    false);
-
-  renderPile('cpu-deck', State.cpu.deck, true);
-  renderPile('cpu-burn', State.cpu.burn, false);
-  renderPile('cpu-stock', State.cpu.stock, true);
-  renderPile('cpu-backlog', State.cpu.backlog, false);
-
-  // rosters
-  renderRoster('player-roster', State.you.roster, 'you');
-  renderRoster('cpu-roster',    State.cpu.roster, 'cpu');
-
-  // hands
-  renderHand('player-hand', State.you.hand);
-  //renderHand('cpu-hand',    State.cpu.hand);
-  renderCpuHand('cpu-hand', State.cpu.hand);
-
-  // scores / tender
-  const youT = byId('tender-you');
-  const cpuT = byId('tender-cpu');
-  if (youT) youT.textContent = String(State.you.tender || 0);
-  if (cpuT) cpuT.textContent = String(State.cpu.tender || 0);
+// --------- selection toggles ---------
+function toggleSelectHand(idx){
+  if (State.turn !== SIDES.YOU) return;
+  if (State.sel.hand.has(idx)) State.sel.hand.delete(idx);
+  else State.sel.hand.add(idx);
+  window.dispatchEvent(new CustomEvent('selectionChanged'));
 }
 
-function renderPile(rootId, pile, faceDown){
-  const root = byId(rootId);
-  if (!root) return;
-  root.innerHTML = '';
-
-  const count = Array.isArray(pile) ? pile.length : 0;
-  if (count === 0){
-    const empty = document.createElement('div');
-    empty.className = 'pile-empty';
-    empty.textContent = 'Empty';
-    root.appendChild(empty);
-    return;
-  }
-  if (faceDown){
-    const back = document.createElement('div');
-    back.className = 'card-back';
-    root.appendChild(back);
-  } else {
-    const top = pile[pile.length - 1];
-    root.insertAdjacentHTML('beforeend', cardEl(top));
-  }
-  const badge = document.createElement('div');
-  badge.className = 'count-badge';
-  badge.textContent = String(count).toUpperCase();
-  root.appendChild(badge);
+function toggleSelectRoster(idx){
+  if (State.turn !== SIDES.YOU) return;
+  if (State.sel.roster.has(idx)) State.sel.roster.delete(idx);
+  else State.sel.roster.add(idx);
+  window.dispatchEvent(new CustomEvent('selectionChanged'));
 }
 
-export function renderRoster(rootId, stacks, side){
-  const root = document.getElementById(rootId);
-  if (!root) return;
-  root.innerHTML = '';
+export function updateSelectionHighlights(){
+  // Hand: indices stored in State.sel.hand (Set of numbers)
+  const handKids = document.querySelectorAll('#hand .card');
+  handKids.forEach((el, i)=>{
+    el.classList.toggle('selected', State.sel.hand.has(i));
+  });
 
-  // make sure the set exists
-  State.sel.tradeHunters ??= new Set();
+  // Roster: slots & their top card
+  const rosterSlots = document.querySelectorAll('#roster .stack');
+  rosterSlots.forEach((slotEl, i)=>{
+    const selected = State.sel.roster.has(i);
+    slotEl.classList.toggle('selected', selected);
 
-  (stacks || []).forEach((stack, i) => {
-    const slot = document.createElement('div');
-    slot.className = 'stack';
-
-    const top   = stack && stack.length ? stack[stack.length - 1] : null;
-    const count = stack ? stack.length : 0;
-
-    // render the top card, if any
-    let cardNodeEl = null;
-    if (top) {
-      cardNodeEl = cardNode(top);
-      slot.appendChild(cardNodeEl);
+    const face = slotEl.querySelector('.card');  // top card in stack
+    if (face) {
+      face.classList.toggle('selected', selected);
     }
-
-    // stack count badge
-    const badge = document.createElement('div');
-    badge.className = 'stack-count badge';
-    badge.textContent = `${count} card${count === 1 ? '' : 's'}`;
-    slot.appendChild(badge);
-
-    // classify top card
-    const isMonster = !!top && (
-      (top.t && String(top.t).toLowerCase() === 'monster') ||
-      (top.power != null && top.tender != null)
-    );
-    const isHunter = !!top && top.t && String(top.t).toLowerCase() === 'hunter';
-    const isSupply = !!top && top.t && String(top.t).toLowerCase() === 'supply';
-
-    const huntSelectable =
-      (State.turn === 'you' && State.phase === 'hunt' && isMonster);
-
-    const tradeSelectable =
-      (State.turn === 'you' && State.phase === 'trade' && side === 'you' && isHunter);
-
-    const restockSelectable =
-      (State.turn === 'you' && State.phase === 'restock' && side === 'you' && isSupply);
-
-    if (huntSelectable || tradeSelectable || restockSelectable){
-      slot.style.cursor = 'pointer';
-      if (cardNodeEl) cardNodeEl.style.cursor = 'pointer';
-    }
-
-    // apply selected styling
-    // hunt selected monster
-    if (State.sel.monster &&
-        State.sel.monster.side === side &&
-        State.sel.monster.idx === i){
-      if (cardNodeEl) cardNodeEl.classList.add('selected');
-    }
-    // trade: multiple hunters in player's roster
-    if (side === 'you' && State.sel.tradeHunters.has(i)){
-      if (cardNodeEl) cardNodeEl.classList.add('selected');
-    }
-    // restock: single supply in player's roster
-    if (side === 'you' && State.sel.restock &&
-        State.sel.restock.side === side &&
-        State.sel.restock.idx === i){
-      if (cardNodeEl) cardNodeEl.classList.add('selected');
-    }
-
-    // click handler
-    slot.addEventListener('click', () => {
-      // re-evaluate live top (in case of re-render data)
-      const liveStack = stacks?.[i] || [];
-      const liveTop   = liveStack.length ? liveStack[liveStack.length - 1] : null;
-      const liveIsMonster = !!liveTop && (
-        (liveTop.t && String(liveTop.t).toLowerCase() === 'monster') ||
-        (liveTop.power != null && liveTop.tender != null)
-      );
-      const liveIsHunter = !!liveTop && liveTop.t && String(liveTop.t).toLowerCase() === 'hunter';
-      const liveIsSupply = !!liveTop && liveTop.t && String(liveTop.t).toLowerCase() === 'supply';
-
-      // HUNT
-      if (State.turn === 'you' && State.phase === 'hunt' && liveIsMonster){
-        const was = State.sel.monster;
-        if (was && was.side === side && was.idx === i){
-          State.sel.monster = null;
-        } else {
-          State.sel.monster = { side, idx: i };
-        }
-        updateHuntReadiness();
-        render();
-        setPhaseButtons();
-        return;
-      }
-
-      // TRADE
-      if (State.turn === 'you' && State.phase === 'trade' && side === 'you' && liveIsHunter){
-        if (State.sel.tradeHunters.has(i)) {
-          State.sel.tradeHunters.delete(i);
-        } else {
-          State.sel.tradeHunters.add(i);
-        }
-        render();
-        setPhaseButtons();
-        return;
-      }
-
-      // RESTOCK
-      if (State.turn === 'you' && State.phase === 'restock' && side === 'you' && liveIsSupply){
-        const was = State.sel.restock;
-        if (was && was.side === side && was.idx === i){
-          State.sel.restock = null;
-        } else {
-          State.sel.restock = { side, idx: i };
-        }
-        render();
-        setPhaseButtons();
-        return;
-      }
-    });
-
-    root.appendChild(slot);
   });
 }
 
-export function renderHand(rootId, cards){
-  const root = byId(rootId);
+function renderPile(rootId, cards, faceDown = false) {
+  const root = document.getElementById(rootId);
   if (!root) return;
   root.innerHTML = '';
+  const top = cards[cards.length - 1] || null;
+  let face;
+  if (faceDown) {
+    // render card back
+    face = document.createElement('div');
+    face.className = 'card card-back pile-top';
+  } else {
+    // render real card
+    face = renderCard(top);
+    face.classList.add('pile-top');
+  }
+  root.appendChild(face);
+  // count badge
+  const count = document.createElement('div');
+  count.className = 'pile-count';
+  count.textContent = cards.length;
+  root.appendChild(count);
+}
 
-  const isHuntSel    = (State.turn === 'you' && State.phase === 'hunt');
-  const isTradeSel   = (State.turn === 'you' && State.phase === 'trade');
-  const isbacklogSel = (State.turn === 'you' && State.phase === 'backlog');
-  const isRefreshSel = (State.turn === 'you' && State.phase === 'refresh');
+// --------- Image helper (background-based) ---------
+const IMG_EXTS = ['jpg','png','webp'];
+const IMG_BASE = './images/';
 
-  State.sel.hunters ??= new Set();
-  State.sel.tradeSupply ??= new Set();
-  State.selectedTobacklog ??= new Set();
+function slugify(s){
+  return String(s || 'unknown')
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-_]/g, '');
+}
 
-  (cards || []).forEach((c, i)=>{
-    const node = cardNode(c);
-    node.dataset.handIndex = i;
+// Preload image, then apply as background-image
+function applyCardBackground(cardEl, card){
+  if (!card || !card.img){
+    cardEl.style.backgroundImage = `url("${IMG_BASE}unknown.jpg")`;
+    return;
+  }
 
-    //c.traits: Array.isArray(c.traits) ? c.traits.map(t => t.toLowerCase()) : [],
+  const url = `${IMG_BASE}${card.img}`;
+  const img = new Image();
 
-    if (isHuntSel && c.t === TYPES.HUNTER){
-      node.style.cursor = 'pointer';
-      if (State.sel.hunters.has(c)) node.classList.add('selected');
-      node.addEventListener('click', ()=>{
-        if (State.sel.hunters.has(c)) State.sel.hunters.delete(c);
-        else State.sel.hunters.add(c);
-        updateHuntReadiness();
-        render();
-        setPhaseButtons();
-      });
+  img.onload = () => {
+    cardEl.style.backgroundImage = `url("${url}")`;
+    cardEl.dataset.img = url;
+  };
+
+  img.onerror = () => {
+    // fallback if image cannot be found
+    cardEl.style.backgroundImage = `url("${IMG_BASE}unknown.jpg")`;
+  };
+
+  img.decoding = 'async';
+  img.fetchPriority = 'low';
+  img.src = url;
+}
+
+// Build overlay blocks using your existing CSS
+function buildOverlay(card){
+  const meta = document.createElement('div');
+  meta.className = 'card-meta';
+  meta.innerHTML = `
+    <div class="card-type">${card.t ?? ''}</div>
+    <div class="card-title">${card.name ?? ''}</div>
+  `;
+
+  const stats = document.createElement('div');
+  stats.className = 'card-stats';
+
+  // ---------------------------
+  // Power
+  // ---------------------------
+  if (card.power != null){
+    const s = document.createElement('div');
+    s.className = 'card-stat';
+    s.textContent = `⚡ ${card.power}`;
+    stats.appendChild(s);
+  }
+
+  // ---------------------------
+  // Tender / Reward
+  // ---------------------------
+  if (card.tender != null){
+    const s = document.createElement('div');
+    s.className = 'card-stat';
+    s.textContent = `💰 ${card.tender}`;
+    stats.appendChild(s);
+  }
+
+  // ---------------------------
+  // Foil badge (only for Hunters)
+  // card.foil === number
+  // ---------------------------
+  const isHunter = String(card.t || '').toLowerCase() === 'hunter';
+  if (isHunter && card.foil != null){
+    const s = document.createElement('div');
+    s.className = 'card-stat card-foil';
+    const count = card.foil > 1 ? ` ×${card.foil}` : '';
+    s.textContent = `❌ ${count}`;
+    stats.appendChild(s);
+  }
+
+  // ---------------------------
+  // Supply requirements (card.requires)
+  // { Kit: 1, Script: 2, Treacle: 1, any: 1 }
+  // ---------------------------
+  if (card.requires && typeof card.requires === 'object'){
+    const SUPPLY_ICONS = {
+      Kit: '🗡',
+      Script: '📜',
+      Treacle: '🧪',
+      any: '❔'
+    };
+
+    const parts = [];
+    for (const [type, amount] of Object.entries(card.requires)){
+      if (!amount) continue;
+      const icon = SUPPLY_ICONS[type] || '';
+      const label = type === 'any' ? 'Any' : type;
+      parts.push(`${icon ? icon + ' ' : ''}${amount} ${label}`);
     }
 
-    if (isTradeSel && c.t === TYPES.SUPPLY){
-      node.style.cursor = 'pointer';
-      if (State.sel.tradeSupply.has(c)) node.classList.add('selected');
-      node.addEventListener('click', ()=>{
-        if (State.sel.tradeSupply.has(c)) State.sel.tradeSupply.delete(c);
-        else State.sel.tradeSupply.add(c);
-        render();
-        setPhaseButtons();
-      });
+    if (parts.length){
+      const req = document.createElement('div');
+      req.className = 'card-req';
+      req.textContent = `${parts.join(' · ')}`;
+      stats.appendChild(req);
     }
+  }
 
-    if (isbacklogSel){
-      node.style.cursor = 'pointer';
-      if (State.selectedTobacklog.has(c)) node.classList.add('selected');
-      node.addEventListener('click', ()=>{
-        if (State.selectedTobacklog.has(c)) State.selectedTobacklog.delete(c);
-        else State.selectedTobacklog.add(c);
-        render();
-        setPhaseButtons && setPhaseButtons();
-      });
-    }
+  return { meta, stats };
+}
 
-    if (isRefreshSel){
-      // nothing special for now
-    }
+
+// --------- card rendering ---------
+// We no longer expose a custom window.cardEl; renderCard is the single path.
+function renderCard(card){
+  if (!card){
+    const empty = el('div','card empty');
+    return empty;
+  }
+
+  const c = el('div', `card ${card.t || ''}`);
+  // width/height driven by CSS custom props
+  c.style.width  = 'var(--card-w)';
+  c.style.height = 'var(--card-h)';
+
+  // overlay
+  const { meta, stats } = buildOverlay(card);
+  c.appendChild(meta);
+  c.appendChild(stats);
+
+  // image as background
+  applyCardBackground(c, card);
+
+  return c;
+}
+
+// --------- sub-renders ---------
+function renderHud(){
+  const you = State.you;
+  const cpu = State.cpu;
+
+  // Turn pill text
+  const pill = document.getElementById('turn-pill');
+  if (pill){
+    const isYouTurn = (State.turn === SIDES.YOU);
+    pill.textContent = `${isYouTurn ? 'YOUR' : 'CPU'} TURN · Round ${State.turnCount}`;
+  }
+
+  // Tender tallies in the sidebar
+  const tenderYouEl = document.getElementById('tender-you');
+  if (tenderYouEl){
+    tenderYouEl.textContent = you.tender ?? 0;
+  }
+
+  const tenderCpuEl = document.getElementById('tender-cpu');
+  if (tenderCpuEl){
+    tenderCpuEl.textContent = cpu.tender ?? 0;
+  }
+}
+
+function renderRoster(){
+  const root = $('roster');
+  if (!root) return;
+
+  const you = State.you;
+  root.innerHTML = '';
+
+  for (let i = 0; i < GAME.ROSTER_SLOTS; i++){
+    const stack = you.roster[i] || [];
+    const slot  = el('div', 'stack');
+
+    const top = stack[stack.length - 1] || null;
+    const face = top ? renderCard(top) : el('div','card empty');
+    face.classList.add('face');
+
+    const count = document.createElement('div');
+    count.className = 'stack-count';
+    count.textContent = `${stack.length} card${stack.length===1?'':'s'}`;
+
+    slot.addEventListener('click', () => toggleSelectRoster(i));
+
+    slot.appendChild(face);
+    slot.appendChild(count);
+    root.appendChild(slot);
+  }
+}
+
+function renderHand(){
+  const root = $('hand');
+  if (!root) return;
+
+  const hand = State.you.hand;
+  root.innerHTML = '';
+
+  hand.forEach((card, i) => {
+    const node = renderCard(card);
+    node.classList.add('hand-card');
+    if (State.sel.hand.has(i)) node.classList.add('selected');
+
+    node.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      toggleSelectHand(i);
+    });
 
     root.appendChild(node);
   });
 }
 
 
-export function renderCpuHand(rootId, cards) {
-  const root = document.getElementById(rootId);
+function renderCpuRoster(){
+  const root = $('cpu-roster');
   if (!root) return;
 
-  const count = Array.isArray(cards) ? cards.length : 0;
+  const cpu = State.cpu;
   root.innerHTML = '';
 
-  if (count === 0) {
-    return;
-  }
+  for (let i = 0; i < GAME.ROSTER_SLOTS; i++){
+    const stack = cpu.roster[i] || [];
+    const slot  = el('div', 'stack');
 
-  // show up to 7 backs so it doesn't get too wide
-  const maxVisible = Math.min(count, 7);
-  for (let i = 0; i < maxVisible; i++) {
+    // top card (CPU roster is visible, like yours)
+    const top  = stack[stack.length - 1] || null;
+    const face = renderCard(top);
+    face.classList.add('face');
+
+    // count badge
+    const count = el('div', 'stack-count');
+    count.textContent = `${stack.length} card${stack.length === 1 ? '' : 's'}`;
+
+    // no selection / click for CPU
+    slot.appendChild(face);
+    slot.appendChild(count);
+    root.appendChild(slot);
+  }
+}
+
+function renderCpuHand() {
+  const root = document.getElementById("cpu-hand");
+  if (!root) return;
+
+  root.innerHTML = '';
+
+  const hand = State.cpu.hand;
+
+  for (let i = 0; i < hand.length; i++) {
     const back = document.createElement('div');
-    back.className = 'cpu-card-back';
+    back.className = 'card card-back';
     root.appendChild(back);
   }
-
-  // badge with actual count
-  /*
-  const badge = document.createElement('div');
-  badge.className = 'cpu-hand-badge';
-  badge.textContent = count;
-  root.appendChild(badge);
-  */
 }
 
-// --- centralised card rendering -----------------------------------------
+// --------- public render ---------
+export function render(){
+  const you = State.you;
+  const cpu = State.cpu;
 
-function buildCardElement(c) {
-  const node = document.createElement('div');
-  node.className = 'card';
+  renderHud();
+  renderRoster();
+  renderHand();
 
-  // tint
-  if (c.t === TYPES.HUNTER) node.classList.add('card--hunter');
-  else if (c.t === TYPES.MONSTER) node.classList.add('card--monster');
-  else if (c.t === TYPES.SUPPLY) node.classList.add('card--supply');
+  // PLAYER PILES
+  renderPile('player-deck',    you.deck,    true);
+  renderPile('player-stock',   you.stock,   true);
+  renderPile('player-backlog', you.backlog);
+  renderPile('player-burn',    you.burn);
 
-  // background
-  let bg = '';
-  if (c.img) {
-    bg = `url('./images/${c.img}')`;
-  } else {
-    if (c.t === TYPES.HUNTER) bg = "url('./images/hunter.jpg')";
-    else if (c.t === TYPES.MONSTER) bg = "url('./images/monster.jpg')";
-    else if (c.t === TYPES.SUPPLY) bg = "url('./images/supply.jpg')";
-  }
-  if (bg) {
-    node.style.backgroundImage = bg;
-    node.style.backgroundSize = 'cover';
-    node.style.backgroundPosition = 'center';
-  }
+  // CPU PILES
+  renderPile('cpu-deck',    cpu.deck,     true);
+  renderPile('cpu-stock',   cpu.stock,   true);
+  renderPile('cpu-backlog', cpu.backlog);
+  renderPile('cpu-burn',    cpu.burn);
 
-  // meta
-  const meta = document.createElement('div');
-  meta.className = 'card-meta';
-  const type = document.createElement('div');
-  type.className = 'card-type';
-  type.textContent = c.t;
-  const title = document.createElement('div');
-  title.className = 'card-title';
-  title.textContent = c.name;
-  meta.appendChild(title);
-  meta.appendChild(type);
-
-
-  // stats
-  const stats = document.createElement('div');
-  stats.className = 'card-stats';
-
-  const reqText = formatRequires(c);
-  if (reqText) {
-    const r = document.createElement('div');
-    r.className = 'card-req';
-    r.textContent = reqText;
-    stats.appendChild(r);
-  }
-
-  if (c.power != null) {
-    const p = document.createElement('div');
-    p.className = 'card-stat power';
-    p.textContent = `${c.power}⚡`;
-    stats.appendChild(p);
-  }
-  if (c.foil != null) {
-    const f = document.createElement('div');
-    f.className = 'card-stat foil';
-    f.textContent = `${c.foil}❌`;
-    stats.appendChild(f);
-  }
-  if (c.tender != null) {
-    const t = document.createElement('div');
-    t.className = 'card-stat tender';
-    t.textContent = `${c.tender}🥇`;
-    stats.appendChild(t);
-  }
-
-
-
-  node.appendChild(meta);
-  node.appendChild(stats);
-
-  return node;
-}
-
-export function cardNode(c) {
-  return buildCardElement(c);
-}
-
-export function cardEl(c) {
-  return buildCardElement(c).outerHTML;
-}
-
-function formatRequires(c) {
-  const r = c.requires;
-  // new / object shape
-  if (r && typeof r === 'object') {
-    // normalise keys to lowercase
-    const norm = {};
-    for (const [k, v] of Object.entries(r)) {
-      norm[k.toLowerCase()] = v;
-    }
-
-    const parts = [];
-    if (norm.any)     parts.push(`${norm.any}x ANY`);
-    if (norm.kit)     parts.push(`${norm.kit}x KIT`);
-    if (norm.script)  parts.push(`${norm.script}x SCRIPT`);
-    if (norm.treacle) parts.push(`${norm.treacle}x TREACLE`);
-
-    return parts.join(' + ');
-  }
-
-  // legacy array shape: ["KIT","SCRIPT"]
-  if (Array.isArray(c.req) && c.req.length) {
-    return c.req.join(' + ');
-  }
-
-  return '';
+  renderCpuRoster();
+  renderCpuHand();
 }

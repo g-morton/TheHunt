@@ -1,245 +1,237 @@
-import { State } from './core/state.js';
-import { render } from './ui/render.js';
-import { setPhaseButtons } from './ui/controls.js';
-import { loadCards, TYPES, loadDecks, buildDeckFromDef } from './data.js';   // ✅ include both here once
-import { clearStepLog, log } from './core/log.js';
-import { executeRefresh } from './logic/refresh.js';
+// js/main.js
+//
+// V5 bootstrap: no phases. Free-order actions with smart button highlights.
+// Assumes the following DOM IDs exist:
+//   #btn-hunt  #btn-trade  #btn-resupply  #btn-cull  #btn-endturn
+//
+// Minimal dependencies: state, action executors, action hints, and render.
 
-let CARD_SEQ = 1;
-function makeCardInstance(proto){
-  return { ...proto, _cid: CARD_SEQ++ };
-}
+import { State, newGameState, SIDES } from './core/state.js';
+import { computeActionHints } from './logic/actions.js';
+import { executeHunt } from './logic/hunt.js';
+import { executeTrade } from './logic/trade.js';
+import { executeResupply } from './logic/resupply.js';
+import { executeCull } from './logic/cull.js';
+import { endYourTurn } from './logic/endturn.js';
+import './logic/setup.js';
+import { render, updateSelectionHighlights } from './ui/render.js';
+import { log } from './core/log.js';
 
-function shuffle(a){
-  for (let i = a.length - 1; i > 0; i--){
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
+// ---------- Button helpers ----------
+function $(id){ return document.getElementById(id); }
 
+const BTN = {
+  hunt:     $('btn-hunt'),
+  trade:    $('btn-trade'),
+  resupply: $('btn-resupply'),
+  cull:     $('btn-cull'),
+  endturn:  $('btn-endturn'),
+  newgame:  $('btn-newgame')
+};
 
-// build deck to exact counts (with replacement)
-function buildDeck(catalog, counts){
-  const make = (pred, n) => {
-    const pool = catalog.filter(pred);
-    const out = [];
-    for (let i = 0; i < n; i++){
-      const proto = pool[Math.floor(Math.random() * pool.length)];
-      out.push(makeCardInstance(proto));
-    }
-    return out;
-  };
-  const hunters  = make(c => c.t === TYPES.HUNTER,  counts.hunters);
-  const monsters = make(c => c.t === TYPES.MONSTER, counts.monsters);
-  const supplies = make(c => c.t === TYPES.SUPPLY,  counts.supplies);
-  return shuffle([...hunters, ...monsters, ...supplies]);
-}
-
-function draw(deck, n){
-  const out = [];
-  for (let i = 0; i < n && deck.length; i++){
-    out.push(deck.pop());
-  }
-  return out;
+function setBtn(el, enabled, highlighted){
+  if (!el) return;
+  // End Turn remains clickable on your turn even if not "highlighted"
+  el.disabled = !enabled;
+  el.classList.toggle('highlight', !!highlighted);
 }
 
-function leastFilledRosterIndex(board){
-  let idx = 0, min = board.roster[0].length;
-  for (let i = 1; i < board.roster.length; i++){
-    if (board.roster[i].length < min){
-      min = board.roster[i].length;
-      idx = i;
-    }
-  }
-  return idx;
+function refreshButtons(){
+  const h = computeActionHints();
+
+  // Enable == same as highlight for primary actions
+  setBtn(BTN.hunt,     h.hunt,     h.hunt);
+  setBtn(BTN.trade,    h.trade,    h.trade);
+  setBtn(BTN.resupply, h.resupply, h.resupply);
+
+  // Cull: enabled only when valid (once/turn, exactly one hand card)
+  setBtn(BTN.cull,     h.cull,     h.cull);
+
+  // End Turn: enabled on your turn; highlight always (helps UX)
+  const yourTurn = (State.turn === SIDES.YOU);
+  setBtn(BTN.endturn,  yourTurn,   yourTurn);
+
+  // Optional: set button titles with reasons for disabled state (nice UX)
+  if (BTN.hunt)     BTN.hunt.title     = h.hunt ? '' : (h.reasons?.hunt     || '');
+  if (BTN.trade)    BTN.trade.title    = h.trade ? '' : (h.reasons?.trade    || '');
+  if (BTN.resupply) BTN.resupply.title = h.resupply ? '' : (h.reasons?.resupply || '');
+  if (BTN.cull)     BTN.cull.title     = h.cull ? '' : (h.reasons?.cull     || '');
+  if (BTN.endturn)  BTN.endturn.title  = h.endturn ? '' : (h.reasons?.endturn  || '');
 }
-function placeIntoRoster(card, side='you'){
-  const board = side === 'you' ? State.you : State.cpu;
-  const idx = leastFilledRosterIndex(board);
-  board.roster[idx].push(card);
+
+// ---------- Wire actions ----------
+function wireButtons(){
+  BTN.hunt     && BTN.hunt.addEventListener('click',     executeHunt);
+  BTN.trade    && BTN.trade.addEventListener('click',    executeTrade);
+  BTN.resupply && BTN.resupply.addEventListener('click', executeResupply);
+  BTN.cull     && BTN.cull.addEventListener('click',     executeCull);
+  BTN.endturn  && BTN.endturn.addEventListener('click',  endYourTurn);
+  BTN.newgame  && BTN.newgame.addEventListener('click',  startNewGame);
 }
-function buildRosterFromDeck(side='you', n=5){
-  const board = side === 'you' ? State.you : State.cpu;
-  const take = draw(board.deck, n);
-  take.forEach(card => placeIntoRoster(card, side));
-}
-function autoRosterMonsters(cards, side='you'){
-  const rest = [];
-  cards.forEach(card => {
-    if (card.t === TYPES.MONSTER){
-      placeIntoRoster(card, side);
-      log(`<p class='sys'>${side.toUpperCase()} drew a monster (${card.name}) — sent to ROSTER.</p>`);
-    } else {
-      rest.push(card);
-    }
+
+// ---------- Global event plumbing ----------
+function wireEvents(){
+  window.addEventListener('stateChanged', ()=>{
+    render?.();
+    refreshButtons();
   });
-  return rest;
-}
 
-async function boot() {
-  const cards = await loadCards();
-  State.cards = cards;
-  bindUI();
-  render();
-  setPhaseButtons();
-}
+  window.addEventListener('selectionChanged', ()=>{
+    // No need to redraw; just toggle .selected based on State.sel
+    updateSelectionHighlights?.();
+    refreshButtons();
+  });
 
-function bindUI(){
-  document.getElementById('btn-newgame')?.addEventListener('click', startNewGame);
+  window.addEventListener('gameOver', (ev)=>{
+    const winner = ev?.detail?.winner || 'unknown';
+    const label =
+      winner === 'you' ? 'YOU' :
+      winner === 'cpu' ? 'CPU' : String(winner).toUpperCase();
 
-  // refresh button
-  document.getElementById('btn-refresh')?.addEventListener('click', ()=>{
-    if (State.turn === 'you' && State.phase === 'refresh'){
-      executeRefresh();
+    // Log it as before (if you like)
+    log(`
+      <p class="sys game-over">
+        🏁 <strong>GAME OVER</strong><br>
+        <strong>${label}</strong> wins the Hunt.
+      </p>
+    `);
+
+    // Show fancy overlay
+    const overlay = $('game-over-overlay');
+    const winnerEl = $('game-over-winner');
+    const summaryEl = $('game-over-summary');
+
+    if (overlay && winnerEl){
+      if (winner === 'you'){
+        winnerEl.textContent = 'Victory! You dominate the Hunt.';
+        if (summaryEl){
+          summaryEl.textContent = 'Your Hunters stand alone amid the wreckage. The CPU slinks away in defeat.';
+        }
+      } else if (winner === 'cpu'){
+        winnerEl.textContent = 'Defeat. The CPU claims the field.';
+        if (summaryEl){
+          summaryEl.textContent = 'Your deck is spent. The Hunt is lost… for now.';
+        }
+      } else {
+        winnerEl.textContent = `${label} ends the Hunt.`;
+      }
+
+      overlay.classList.add('visible');
     }
+
+    console.log(`Game Over: ${label} wins`);
   });
 }
 
-// global advance
-window.addEventListener('advancePhase', ()=> nextPhase());
-window.addEventListener('stateChanged', ()=> { render(); setPhaseButtons(); });
 
-
-
-export async function startNewGame(){
-  clearStepLog();
-
-  // 1) beginner toggle
-  const beginnerCb = document.getElementById('beginner-mode');
-  State.beginner = !!(beginnerCb && beginnerCb.checked);
-
-  // 2) show action bar
-  const bar = document.querySelector('.actionbar');
-  if (bar) bar.classList.add('show');
-
-  // 3) reset core state FIRST
-  State.started = true;
-  State.turn = 'you';
-  State.phase = 'hunt';
-  State.readyPhase = null;
-  State.turnCount = 1;
-  State.refreshDrawEmptyOnly = true;
-
-  State.you = {
-    deck: [],
-    stock: [],
-    backlog: [],
-    burn: [],
-    hand: [],
-    roster: [[],[],[],[],[]],
-    tender: 0
-  };
-  State.cpu = {
-    deck: [],
-    stock: [],
-    backlog: [],
-    burn: [],
-    hand: [],
-    roster: [[],[],[],[],[]],
-    tender: 0
-  };
-
-  State.sel = {
-    monster: null,
-    hunters: new Set(),
-    tradeSupply: new Set(),
-    tradeHunters: new Set(),
-    restock: null
-  };
-  State.selectedTobacklog = new Set();
-
-  // 4) load data
-  const cards = await loadCards();
-  const decks = await loadDecks();
-
-  // keep cards around if you need them elsewhere
-  State.cards = cards;
-
-  //const cardById = Object.fromEntries(cards.map(c => [c.id, c]));
-  const cardByKey = Object.fromEntries(cards.map(c => [c.key, c]));
-  const deckKeys = Object.keys(decks);
-
-  const playerKey = deckKeys[Math.floor(Math.random() * deckKeys.length)];
-  let cpuKey;
-  do {
-    cpuKey = deckKeys[Math.floor(Math.random() * deckKeys.length)];
-  } while (cpuKey === playerKey);
-
-  const playerDeckDef = decks[playerKey];
-  const cpuDeckDef    = decks[cpuKey];
-
-  State.you.deck = buildDeckFromDef(playerDeckDef, cardByKey);
-  State.cpu.deck = buildDeckFromDef(cpuDeckDef, cardByKey);
-
-  log(`<p class='sys'>🎴 You are playing with the <strong>${playerDeckDef.name}</strong>.</p>`);
-  log(`<p class='sys'>🤖 CPU is playing with the <strong>${cpuDeckDef.name}</strong>.</p>`);
-
-
-  // optional shuffle
-  shuffle(State.you.deck);
-  shuffle(State.cpu.deck);
-
-  // 6) tutorial / intro log
-  log(`
-    <p class='log-line rule-bottom'>
-      <strong>Welcome to <em>The Hunt</em></strong><br><br>
-      🎯 Hunt monsters to gain Tender 💰.<br>
-      ⚔️ Add your hunters’ Power (P) — if it meets the monster’s Power, the hunt succeeds.<br>
-      🪖 Regimented hunters must hunt with another regimented hunter.<br>
-      ${State.beginner ? '❌ Beginner mode: Foil is disabled for both sides.<br>' : ''}
-      <br>
-      Good luck — the Hunt begins!
+// ---------- Intro rules block ----------
+function buildIntroRulesHtml(){
+  return `
+  <div class="intro-block">
+    <h2>Welcome to <span class="brand-inline">THE HUNT v5</span></h2>
+    <p>
+      This is a fast, 2-player deck-duel. Build Hunters, manage Supply, and
+      claim the most 💰 <strong>Tender</strong> by defeating Monsters.
     </p>
-  `);
 
-  // 7) deal/opening setup (your original steps)
+    <h3>How your turn works</h3>
+    <ul>
+      <li>There are <strong>no fixed phases</strong> – you may use any actions in any order.</li>
+      <li>Select cards in your <strong>HAND</strong> and/or <strong>ROSTER</strong>.</li>
+      <li>Any valid actions for that selection will cause their buttons to <strong>light up</strong>.</li>
+      <li>Click a lit button to perform that action.</li>
+      <li>When you’re done, click <strong>“I’m done”</strong> to end your turn.</li>
+    </ul>
 
-  // 1) 5 to roster each
-  buildRosterFromDeck('you', 5);
-  buildRosterFromDeck('cpu', 5);
-  log("<p class='log-line'>5 cards drawn into each player's Roster.</p>");
+    <h3>Core actions</h3>
+    <ul>
+      <li><strong>Hunt</strong> – Spend Hunters from your hand to defeat a Monster on your roster. Gain its 💰 Tender; Hunters go to your backlog, the Monster is 🔥 burned.</li>
+      <li><strong>Trade</strong> – Spend Supply from your hand to recruit a Hunter from your roster into your backlog (respecting their cost).</li>
+      <li><strong>Resupply</strong> – Move Supply from your roster back to your backlog, then draw fresh cards.</li>
+      <li><strong>Cull</strong> – 🔥 Burn a single unwanted card from your hand.</li>
+    </ul>
 
-  // 2) player 10 to stock
-  State.you.stock.push(...draw(State.you.deck, 10));
-  log("<p class='log-line you'>→ 10 cards drawn into your stock.</p>");
+    <h3>Reading the board</h3>
+    <ul>
+      <li><strong>Deck</strong> → where new cards are drawn from.</li>
+      <li><strong>Stock</strong> → your active draw pile.</li>
+      <li><strong>Roster</strong> → Monsters and Hunters “on the board”.</li>
+      <li><strong>Backlog</strong> → discard pile that is reshuffled into your stock when needed.</li>
+      <li><strong>Burn</strong> → cards removed from the game.</li>
+    </ul>
 
-  // 3) player 5 to hand (monsters auto-roster)
-  const firstFive = draw(State.you.deck, 5);
-  State.you.hand.push(...autoRosterMonsters(firstFive, 'you'));
-
-  // CPU: 10 to stock, 5 to hand (monsters auto-roster)
-  State.cpu.stock.push(...draw(State.cpu.deck, 10));
-  const cpuFirstFive = draw(State.cpu.deck, 5);
-  State.cpu.hand.push(...autoRosterMonsters(cpuFirstFive, 'cpu'));
-  log("<p class='log-line cpu'>→ CPU drew its Stock and starting Hand.</p>");
-
-  // 8) turn header
-  log(`<p class='turn-header you'>TURN 1 — <strong>YOUR TURN</strong></p>`);
-
-  // 9) render UI
-  render();
-  setPhaseButtons();
+    <p class="intro-tip">
+      When you’re ready, click <strong>START NEW GAME</strong> above to deal decks and begin.
+    </p>
+  </div>`;
 }
 
+// ---------- Boot sequence ----------
+async function boot() {
+  // 1) Initialise a clean but EMPTY state (no decks dealt yet)
+  newGameState();
 
-export function nextPhase(){
-  const order = ['hunt','trade','restock','backlog','refresh'];
-  const i = order.indexOf(State.phase);
+  // 2) Wire UI + events
+  wireButtons();
+  wireEvents();
 
-  // clear selections when leaving a phase
-  State.sel.monster = null;
-  State.sel.hunters?.clear?.();
-  State.sel.tradeSupply?.clear?.();
-  State.sel.tradeHunters?.clear?.();
-  State.sel.restock = null;
-  State.selectedTobacklog?.clear?.();
-  State.readyPhase = null;
+  // 3) Initial paint + neutral button state
+  render?.();
+  refreshButtons();
 
-  State.phase = order[(i+1) % order.length];
+  // 4) Show rules / intro in the log, but do NOT start a game yet
+  const beginnerBox = document.getElementById('beginner-mode');
+  const showIntro = !beginnerBox || beginnerBox.checked;
 
-  render();
-  setPhaseButtons();
+  if (showIntro){
+    log(buildIntroRulesHtml());
+  } else {
+    log("<p class='sys'>Click <strong>START NEW GAME</strong> to begin The Hunt v5.</p>");
+  }
+
+  // Overlay button wiring
+  const playAgainBtn   = $('btn-play-again');
+  const closeOverlayBtn = $('btn-close-overlay');
+  const overlay        = $('game-over-overlay');
+
+  if (playAgainBtn){
+    playAgainBtn.addEventListener('click', async ()=>{
+      overlay?.classList.remove('visible');
+      await startNewGame();
+    });
+  }
+
+  if (closeOverlayBtn){
+    closeOverlayBtn.addEventListener('click', ()=>{
+      overlay?.classList.remove('visible');
+    });
+  }
 }
 
-document.addEventListener('DOMContentLoaded', boot);
+// ---------- Init ----------
+document.addEventListener('DOMContentLoaded', ()=>{
+  boot();
+});
+
+// ---------- New game entry point ----------
+export async function startNewGame(){
+  // wipe & re-init base state
+  newGameState();
+
+  // call your setup routine if present (V5 first, then fallbacks)
+  if (typeof window.setupV5 === 'function'){
+    await window.setupV5();
+  } else if (typeof window.setupGame === 'function'){
+    await window.setupGame();
+  } else if (typeof window.initGame === 'function'){
+    await window.initGame();
+  } else {
+    console.warn('[The Hunt] No setup routine found. Define window.setupV5() to build decks & deal.');
+  }
+
+  // initial paint
+  render?.();
+  // force buttons to re-evaluate (in case nothing emitted yet)
+  window.dispatchEvent(new CustomEvent('selectionChanged'));
+  window.dispatchEvent(new CustomEvent('stateChanged'));
+}
