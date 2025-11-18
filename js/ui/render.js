@@ -1,11 +1,47 @@
 // js/ui/render.js
 
 import { State, SIDES, GAME } from '../core/state.js';
+import { isMonster } from '../logic/utils.js'; 
 
 function $(id){ return document.getElementById(id); }
 function el(tag, cls){ const n = document.createElement(tag); if (cls) n.className = cls; return n; }
 
 // --------- selection toggles ---------
+
+function canSelectAsYou(){
+  // Normal: it's your turn
+  if (State.turn === SIDES.YOU) return true;
+
+  // FOIL case: allow selection while defending
+  if (State.foil?.active && State.foil.defender === SIDES.YOU) return true;
+
+  return false;
+}
+
+function onClickYourHandCard(idx){
+  if (!canSelectAsYou()) return;
+
+  const sel = State.sel.hand ?? new Set();
+  if (sel.has(idx)) sel.delete(idx);
+  else sel.add(idx);
+
+  State.sel.hand = sel;
+  window.dispatchEvent(new CustomEvent('selectionChanged'));
+}
+
+
+function onClickYourRosterSlot(idx){
+  if (!canSelectAsYou()) return;
+
+  const sel = State.sel.roster ?? new Set();
+  if (sel.has(idx)) sel.delete(idx);
+  else sel.add(idx);
+
+  State.sel.roster = sel;
+  window.dispatchEvent(new CustomEvent('selectionChanged'));
+}
+
+/*
 function toggleSelectHand(idx){
   if (State.turn !== SIDES.YOU) return;
   if (State.sel.hand.has(idx)) State.sel.hand.delete(idx);
@@ -19,6 +55,7 @@ function toggleSelectRoster(idx){
   else State.sel.roster.add(idx);
   window.dispatchEvent(new CustomEvent('selectionChanged'));
 }
+  */
 
 export function updateSelectionHighlights(){
   // Hand: indices stored in State.sel.hand (Set of numbers)
@@ -38,6 +75,16 @@ export function updateSelectionHighlights(){
       face.classList.toggle('selected', selected);
     }
   });
+
+  //CPU roster highlight
+  const cpuSlots = document.querySelectorAll('#cpu-roster .stack');
+  cpuSlots.forEach((slotEl, i)=>{
+    const selected = (State.sel.enemyMonsterIdx === i);
+    slotEl.classList.toggle('selected', selected);
+    const face = slotEl.querySelector('.card');
+    if (face) face.classList.toggle('selected', selected);
+  });
+
 }
 
 function renderPile(rootId, cards, faceDown = false) {
@@ -243,7 +290,8 @@ function renderRoster(){
     count.className = 'stack-count';
     count.textContent = `${stack.length} card${stack.length===1?'':'s'}`;
 
-    slot.addEventListener('click', () => toggleSelectRoster(i));
+    // 🔁 use foil-aware handler
+    slot.addEventListener('click', () => onClickYourRosterSlot(i));
 
     slot.appendChild(face);
     slot.appendChild(count);
@@ -263,9 +311,10 @@ function renderHand(){
     node.classList.add('hand-card');
     if (State.sel.hand.has(i)) node.classList.add('selected');
 
+    // 🔁 use foil-aware handler
     node.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      toggleSelectHand(i);
+      onClickYourHandCard(i);
     });
 
     root.appendChild(node);
@@ -292,6 +341,27 @@ function renderCpuRoster(){
     // count badge
     const count = el('div', 'stack-count');
     count.textContent = `${stack.length} card${stack.length === 1 ? '' : 's'}`;
+
+
+    // Highlight if this is the chosen enemy target
+    if (State.sel.enemyMonsterIdx === i){
+      slot.classList.add('selected');
+      face.classList.add('selected');
+    }
+
+    // Allow player to pick a target monster from CPU roster
+    slot.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      if (!top || !isMonster(top)) {
+        // only monsters can be targeted
+        State.sel.enemyMonsterIdx = null;
+      } else {
+        State.sel.enemyMonsterIdx =
+          State.sel.enemyMonsterIdx === i ? null : i;
+      }
+      window.dispatchEvent(new CustomEvent('selectionChanged'));
+    });
+
 
     // no selection / click for CPU
     slot.appendChild(face);

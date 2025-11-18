@@ -21,9 +21,13 @@ export function isMonster(c){
 export function shuffle(a){ for (let i=a.length-1;i>0;i--){const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 export function draw(pile, n){ const out = []; while(n-- > 0 && pile.length) out.push(pile.pop()); return out; }
 
-export function ensureStockFromBacklog(board){
-  if (board.stock.length) return;
+
+export function ensureStockFromBacklog(board, min = 1){
+  // If we already have at least `min` cards in stock, do nothing
+  if (board.stock.length >= min) return;
   if (!board.backlog.length) return;
+
+  // Shuffle backlog into stock
   shuffle(board.backlog);
   board.stock.push(...board.backlog);
   board.backlog.length = 0;

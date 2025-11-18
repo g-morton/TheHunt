@@ -1,4 +1,4 @@
-// js/logic/cpu.js — V5 CPU turn logic (no phases, no FOIL)
+// js/logic/cpu.js — V5.1 CPU turn logic with FOIL
 
 import { State, SIDES, GAME } from '../core/state.js';
 import { log } from '../core/log.js';
@@ -7,24 +7,64 @@ import {
   isHunter,
   isSupply,
   num,
-  ensureStockFromBacklog,
-  draw,
-  autoRosterMonsters,
-  checkWin 
+  topOf,
+  checkWin
 } from './utils.js';
-import { suppliesMeetRequirements } from './trade.js'
+import { suppliesMeetRequirements } from './trade.js';
 import {
   discardHuntersAfterHunt,
   discardMonsterAfterHunt,
   discardResupply,
-  discardCull
+  discardCull,
+  discardTrade
 } from './discard.js';
+import { startCpuTurn, startPlayerTurn } from './startturn.js';
+import { showFoilPrompt } from '../ui/foil.js';
+import {
+  playerHasFoilHunters,
+  collectPlayerFoilSelection,
+  computeFoilAgainstHunters,
+  applyPlayerFoilCardMovement,
+  discardFoiledHunters,
+  promptPlayerFoil
+} from './cpu-foil.js';
+
 
 const CPU_DELAY = 500; // ms between actions — tweak to taste
+
+
+
+// 🔹 NEW: CPU-end-of-turn roster refill
+function refillRosterFromDeck(board){
+  let added = 0;
+  const names = [];
+
+  board.roster = board.roster || [];
+  for (let i = 0; i < GAME.ROSTER_SLOTS; i++){
+    const stack = board.roster[i] || (board.roster[i] = []);
+    if (stack.length === 0 && board.deck.length){
+      const card = board.deck.pop();
+      stack.push(card);
+      added++;
+      names.push(card.name || 'Card');
+    }
+  }
+
+  if (added > 0){
+    log(`
+      <p class="cpu">
+        🧱 CPU refills ${added} empty roster slot${added === 1 ? '' : 's'}
+        from its deck: ${names.join(', ')}.
+      </p>
+    `);
+  }
+}
+
 
 // ---------------------------------------------------------------------------
 // Utility
 // ---------------------------------------------------------------------------
+
 function sleep(ms){
   return new Promise(res => setTimeout(res, ms));
 }
@@ -33,44 +73,23 @@ function randomPick(arr){
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+// Ensure CPU has a persona for basic prioritisation
 function ensureCpuPersona(){
-  if (!State.cpuPersona){
-    const personas = ['offensive','defensive','balanced'];
-    State.cpuPersona = randomPick(personas);
-    log(`<p class="sys">🤖 CPU temperament set to <strong>${State.cpuPersona}</strong>.</p>`);
-  }
-  return State.cpuPersona;
-}
-
-// Find least-filled roster slot for a side
-function leastFilledRosterIndex(board){
-  let bestIdx = 0;
-  let bestCount = Infinity;
-  board.roster.forEach((stack, i)=>{
-    const len = stack ? stack.length : 0;
-    if (len < bestCount){
-      bestCount = len;
-      bestIdx = i;
-    }
-  });
-  return bestIdx;
-}
-
-// Refill empty roster slots from DECK (CPU side)
-function refillCpuRosterFromDeck(){
   const cpu = State.cpu;
-  cpu.roster = cpu.roster || [];
-  for (let i = 0; i < GAME.ROSTER_SLOTS; i++){
-    const stack = cpu.roster[i] || (cpu.roster[i] = []);
-    if (stack.length === 0 && cpu.deck.length){
-      const card = cpu.deck.pop();
-      stack.push(card);
-    }
+  if (!cpu.persona){
+    const personas = ['offensive','balanced','defensive'];
+    cpu.persona = personas[Math.floor(Math.random() * personas.length)];
   }
+  return cpu.persona;
 }
+
+
+
+
+
 
 // ---------------------------------------------------------------------------
-// CPU HUNT LOGIC (simple, no FOIL)
+// CPU HUNT PLANNING
 // ---------------------------------------------------------------------------
 
 // Find the "best" hunt target and hunter group
@@ -126,70 +145,256 @@ function planCpuHunt(){
   };
 }
 
-async function cpuDoHunt(){
-  const cpu = State.cpu;
-  const plan = planCpuHunt();
-  if (!plan) return false;
 
-  const { hunters, target, huntersPower } = plan;
-  const monster = target.card;
+// ---------------------------------------------------------------------------
+// CPU HUNT with FOIL support
+// ---------------------------------------------------------------------------
+
+// CPU attempts a Hunt (now FOIL-aware).
+// Returns true if it performed a Hunt action (success or fail), false if no hunt was attempted.
+// CPU attempts a Hunt (FOIL-aware).
+// Returns true if it performed a Hunt action (success or fail), false if no hunt was attempted.
+async function cpuDoHunt(){
+  const cpu  = State.cpu;
+  const plan = planCpuHunt();
+  if (!plan) {
+    log(`
+      <p class="cpu">
+        🤔 CPU considers a <strong>Hunt</strong> but finds no worthwhile target.
+      </p>
+    `);
+    await sleep(CPU_DELAY);
+    return false;
+  }
+
+  let { hunters, target, huntersPower } = plan;
+  // Clone hunters array so we can modify independently after FOIL
+  hunters = hunters.slice();
+
+  const monster      = target.card;
+  const monsterPower = num(monster.power);
+  const ownerLabel   = (target.side === 'you' || target.side === SIDES.YOU)
+    ? 'YOUR roster'
+    : 'CPU roster';
+
+  const hunterListText = hunters
+    .map(h => `${h.name || 'Hunter'} (P${num(h.power)})`)
+    .join(', ') || 'none';
 
   log(`
     <p class="phase-step cpu">
-      🗡️ CPU attempts a hunt on <strong>${monster.name}</strong>
-      (P${monster.power}, 💰${monster.tender || 0}) with 
-      ${hunters.length} hunters (total P${huntersPower}).
+      🗡️ CPU attempts a Hunt on <strong>${monster.name}</strong>
+      (P${monster.power}, 💰${monster.tender || 0}) on
+      <strong>${ownerLabel}</strong><br>
+      using ${hunters.length} hunter(s) (total P${huntersPower}):<br>
+      <span class="cpu-hunters-list">${hunterListText}</span>
     </p>
   `);
 
-  // Remove hunters from CPU hand
-  hunters.forEach(h => {
+  let foilUsed         = false;
+  let foilRemovedPower = 0;
+  let foiledNames      = [];
+
+  // 🔹 Player may attempt to FOIL any CPU Hunt (if they have Hunters available)
+  if (playerHasFoilHunters()){
+    log(`
+      <p class="you">
+        🛡️ You may <strong>FOIL</strong> this CPU Hunt by committing Hunters
+        from your hand or roster.
+      </p>
+    `);
+
+    // Clear any stale selection before asking for a Foil choice
+    if (State.sel){
+      State.sel.hand?.clear?.();
+      State.sel.roster?.clear?.();
+      State.sel.monster = null;
+      if ('enemyMonsterIdx' in State.sel){
+        State.sel.enemyMonsterIdx = null;
+      }
+      window.dispatchEvent(new CustomEvent('selectionChanged'));
+    }
+
+    // Enter FOIL mode so UI can highlight your hand/roster
+    State.foil.active   = true;
+    State.foil.defender = SIDES.YOU;
+    State.foil.target   = monster;
+    window.dispatchEvent(new CustomEvent('stateChanged'));
+
+    // Show the FOIL popup and wait for player's choice
+    const decision = await promptPlayerFoil(monster, hunters);
+
+    if (decision === 'foil'){
+      const foilSelection = collectPlayerFoilSelection();
+      const foilBudget = foilSelection.reduce(
+        (sum, f) => sum + num(f.card.power),
+        0
+      );
+
+      if (foilBudget > 0){
+        const foilOutcome = computeFoilAgainstHunters(hunters, foilBudget);
+
+        foilUsed         = true;
+        foilRemovedPower = foilOutcome.removedPower;
+        foiledNames      = foilOutcome.foiled.map(h => h.name);
+
+        // Your Foil Hunters are burned
+        applyPlayerFoilCardMovement(foilSelection);
+
+        // Foiled CPU Hunters are burned
+        if (foilOutcome.foiled.length){
+          discardFoiledHunters('cpu', foilOutcome.foiled);
+        }
+
+        // Remaining CPU hunters + power after FOIL
+        hunters      = foilOutcome.survivors;
+        huntersPower = huntersPower - foilOutcome.removedPower;
+      } else {
+        log(`
+          <p class="you">
+            You selected <strong>FOIL</strong> but no valid Hunters were chosen,
+            so the CPU's Hunt proceeds unblocked.
+          </p>
+        `);
+      }
+
+      // Clear selection now that Foil has been resolved
+      if (State.sel){
+        State.sel.hand?.clear?.();
+        State.sel.roster?.clear?.();
+        State.sel.monster = null;
+        if ('enemyMonsterIdx' in State.sel){
+          State.sel.enemyMonsterIdx = null;
+        }
+        window.dispatchEvent(new CustomEvent('selectionChanged'));
+      }
+    } else if (decision === 'pass'){
+      log(`
+        <p class="you">
+          You allow the CPU's Hunt to proceed without Foil.
+        </p>
+      `);
+    }
+
+    // Exit FOIL mode
+    State.foil.active   = false;
+    State.foil.defender = null;
+    State.foil.target   = null;
+    window.dispatchEvent(new CustomEvent('stateChanged'));
+  }
+
+  // 🔹 Commit CPU hunters: remove all *original* hunters from hand.
+  // Foiled ones may already be removed by discardFoiledHunters; indexOf check is safe.
+  plan.hunters.forEach(h => {
     const ix = cpu.hand.indexOf(h);
     if (ix >= 0){
       cpu.hand.splice(ix, 1);
     }
   });
 
-  // Remove monster from appropriate roster stack
-  const defender = (target.side === 'you') ? State.you : State.cpu;
+  if (foilUsed && foilRemovedPower > 0){
+    log(`
+      <p class="you">
+        🛡️ Your Foil neutralises ${foiledNames.length} CPU hunter(s)
+        (blocking P${foilRemovedPower}). 
+      </p>
+    `);
+  }
+
+  // 🔹 Check if, after Foil, the hunt still has enough power to succeed
+  if (huntersPower < monsterPower){
+    // Hunt fails: monster survives, CPU's surviving hunters go to backlog,
+    // your foilers are already burned, and foiled CPU hunters were burned too.
+    log(`
+      <p class="cpu">
+        ❌ <strong>CPU Hunt fails</strong>: remaining hunter power P${huntersPower}
+        is not enough to defeat <strong>${monster.name}</strong> (P${monsterPower}).<br>
+        The monster survives, but the CPU's hunters are spent.
+      </p>
+    `);
+
+    // Surviving (non-foiled) hunters always go to backlog
+    discardHuntersAfterHunt('cpu', hunters);
+
+    window.dispatchEvent(new CustomEvent('stateChanged'));
+    await sleep(CPU_DELAY);
+    return true;
+  }
+
+  // 🔹 Hunt succeeds
+  const defender = (target.side === 'you' || target.side === SIDES.YOU)
+    ? State.you
+    : State.cpu;
+
   const stack = defender.roster[target.idx] || [];
-  const pos = stack.lastIndexOf(monster);
+  const pos   = stack.lastIndexOf(monster);
   if (pos >= 0){
     stack.splice(pos, 1);
   }
 
-  // Discards
+  // Monster is always burned on success
   discardMonsterAfterHunt(target.side, monster);
+
+  // Surviving (non-foiled) hunters always go to backlog
   discardHuntersAfterHunt('cpu', hunters);
 
-  // Award tender to CPU
-  const gain = num(monster.tender);
-  if (gain > 0){
-    cpu.tender = num(cpu.tender) + gain;
+  // Tender gain rules:
+  // - Hunting CPU's own monsters (on its own roster) yields Tender.
+  // - Hunting the player's roster gives no Tender (pure disruption).
+  if (target.side === 'cpu' || target.side === SIDES.CPU) {
+    const gain = Number(target.card.tender || 0);
+    if (gain > 0){
+      cpu.tender = Number(cpu.tender || 0) + gain;
+      log(`
+        <p class='cpu'>
+          ✅ <strong>CPU Hunt succeeds</strong> against its own monster 
+          <strong>${monster.name}</strong>, gaining <strong>${gain}</strong> Tender.
+        </p>
+      `);
+    } else {
+      log(`
+        <p class='cpu'>
+          ✅ <strong>CPU Hunt succeeds</strong> against its own monster 
+          <strong>${monster.name}</strong>, but it yields no Tender.
+        </p>
+      `);
+    }
+  } else {
+    if (foilUsed && foilRemovedPower > 0){
+      log(`
+        <p class='cpu'>
+          ✅ Despite your Foil, CPU still removes 
+          <strong>${monster.name}</strong> from your roster (no Tender gained).
+        </p>
+      `);
+    } else {
+      log(`
+        <p class='cpu'>
+          ✅ CPU disrupts your roster by removing 
+          <strong>${monster.name}</strong>, but gains no Tender.
+        </p>
+      `);
+    }
   }
-
-  log(`
-    <p class="phase-step cpu">
-      ⚔️ CPU <strong>succeeds</strong> in the hunt and gains 
-      <strong>${gain}</strong> Tender.
-    </p>
-  `);
 
   window.dispatchEvent(new CustomEvent('stateChanged'));
   await sleep(CPU_DELAY);
   return true;
 }
 
+
+
+
 // ---------------------------------------------------------------------------
 // CPU TRADE (simplified)
 // ---------------------------------------------------------------------------
 
-// Very simple trade: if CPU has 2+ supplies, move one supply + one hunter
-// from roster to backlog, simulating "setting up" future draws.
+// Very simple trade: if CPU has supplies and a hunter it can pay for, trade it
+// into backlog using supplies from hand.
 async function cpuDoTrade(){
   const cpu = State.cpu;
 
-  const suppliesInHand = cpu.hand.filter(isSupply);
+  const suppliesInHand = cpu.hand.filter(c => isSupply(c));
   if (!suppliesInHand.length) return false;
 
   const hunters = [];
@@ -208,7 +413,7 @@ async function cpuDoTrade(){
   if (!possibleTrades.length) return false;
 
   // For now, just pick one at random
-  const choice = possibleTrades[Math.floor(Math.random() * possibleTrades.length)];
+  const choice = randomPick(possibleTrades);
   const { idx: hunterSlot, card: hunterCard } = choice;
 
   // CPU pays with ALL supplies in hand that were considered
@@ -230,7 +435,7 @@ async function cpuDoTrade(){
   }
 
   // Move hunter + supplies to backlog
-  cpu.backlog.push(hunterCard, ...paySupplies);
+  discardTrade('cpu', hunterCard, paySupplies);
 
   log(`
     <p class="phase-step cpu">
@@ -240,7 +445,7 @@ async function cpuDoTrade(){
   `);
 
   window.dispatchEvent(new CustomEvent('stateChanged'));
-  await new Promise(res => setTimeout(res, 500));
+  await sleep(CPU_DELAY);
   return true;
 }
 
@@ -323,6 +528,9 @@ async function cpuDoCull(){
 export async function runCpuTurn(){
   if (State.turn !== SIDES.CPU && State.turn !== 'cpu') return;
 
+  // V5.1: CPU refresh now happens at the START of its own turn
+  startCpuTurn();
+
   const persona = ensureCpuPersona();
   log(`<p class="turn-header cpu">TURN ${State.turnCount} — <strong>CPU TURN (${persona})</strong></p>`);
 
@@ -354,30 +562,7 @@ export async function runCpuTurn(){
     await attemptInOrder([cpuDoHunt, cpuDoTrade, cpuDoResupply, cpuDoCull]);
   }
 
-  // After actions, perform CPU end-of-turn refresh
-
-  // 1) CPU hand → backlog
-  if (State.cpu.hand.length){
-    State.cpu.backlog.push(...State.cpu.hand);
-    State.cpu.hand.length = 0;
-  }
-
-  // 2) Ensure stock from backlog
-  ensureStockFromBacklog(State.cpu);
-
-  // 3) Draw a new hand
-  let drawn = draw(State.cpu.stock, GAME.HAND_SIZE);
-  drawn = autoRosterMonsters(drawn, State.cpu);
-
-  // 4) Refill empty roster slots from deck
-  refillCpuRosterFromDeck();
-
-  // 5) Remaining drawn cards become CPU hand
-  State.cpu.hand.push(...drawn);
-
-  // 6) Reset shared per-turn flags
-  State.cullUsed = false;
-
+  // After CPU actions, check for win
   const winner = checkWin();
   if (winner){
     window.dispatchEvent(new CustomEvent('gameOver', { detail:{ winner }}));
@@ -385,11 +570,15 @@ export async function runCpuTurn(){
   }
 
 
-  // 7) Return turn to player
+  
+  // ✅ Refill CPU roster at the END of its turn
+  refillRosterFromDeck(State.cpu);
+  window.dispatchEvent(new CustomEvent('stateChanged'));
+
+
+  // Hand turn back to player, and refresh them at the START of their turn
   State.turnCount += 1;
   State.turn = SIDES.YOU;
 
-  log(`<p class="turn-header you">TURN ${State.turnCount} — <strong>YOUR TURN</strong></p>`);
-
-  window.dispatchEvent(new CustomEvent('stateChanged'));
+  startPlayerTurn();
 }

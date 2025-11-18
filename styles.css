@@ -136,18 +136,55 @@ body{
   display:flex;align-items:flex-start;justify-content:flex-start;
   z-index:3;pointer-events:none
 }
-.cpu-matrix{display:grid;grid-template-columns:min-content 1fr min-content;gap:var(--gap);align-items:start}
-.player-matrix{display:grid;grid-template-columns:min-content 1fr min-content;grid-template-rows:auto auto;gap:var(--gap);align-items:start}
-.left-piles{grid-column:1;grid-row:1 / span 2;display:flex;flex-direction:column;gap:var(--gap)}
-.player-matrix #player-roster{grid-column:2;grid-row:1}
-.player-matrix .right-piles{grid-column:3;grid-row:1 / span 2;display:flex;flex-direction:column;gap:var(--gap)}
-.player-matrix #player-hand{grid-column:2;grid-row:2}
-.right-piles {
+.cpu-matrix,
+.player-matrix {
+  display: grid;
+  grid-template-columns: min-content 1fr min-content;
+  grid-template-rows: auto auto;      /* row 1: roster row, row 2: hand row */
+  gap: var(--gap);
+  align-items: start;
+}
+
+/* LEFT: deck + burn row, tender below (for both CPU & Player) */
+.left-piles {
+  grid-column: 1;
+  grid-row: 1 / span 2;
   display: flex;
   flex-direction: column;
-  gap: var(--gap);  /* ✅ adds space between STOCK and BACKLOG */
-  align-items: center;
+  gap: var(--gap);
+  align-items: flex-start;
 }
+
+/* little helper row for [Deck] [Burn] and [Stock] [Backlog] */
+.pile-row {
+  display: flex;
+  flex-direction: row;
+  gap: var(--gap);
+}
+
+/* CENTER: roster on row 1, hand on row 2 */
+.player-matrix #roster,
+.cpu-matrix #cpu-roster {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.player-matrix #hand,
+.cpu-matrix #cpu-hand {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+/* RIGHT: stock + backlog aligned to hand row */
+.right-piles {
+  grid-column: 3;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  align-items: flex-end;
+}
+
 
 .roster {
   position: relative;
@@ -273,7 +310,7 @@ body{
 }
 
 .card.is-hovered,
-.card:not(.empty):hover {
+.card:not(.empty, .card-back):hover {
   transform: scale(2);
   z-index: 10;
   box-shadow: 0 12px 26px rgba(0,0,0,.4);
@@ -398,7 +435,7 @@ body{
   overflow-y: auto;           /* scrollable */
   max-height: 90vh;           /* stops before score section */
   color: #dce3ec;
-  font-family: Consolas, 'Courier New', monospace;
+  /*font-family: Consolas, 'Courier New', monospace;*/
   line-height: 1.35;
   scrollbar-width: thin;
 }
@@ -661,6 +698,164 @@ button.highlight {
     transform: translateY(-1px);
   }
 }
+
+
+/* FOIL overlay */
+.foil-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999; /* above board */
+  display: flex;
+  align-items: flex-start;   /* 👈 push dialog towards the top */
+  justify-content: center;
+  padding-top: 60px;         /* 👈 space from very top */
+  pointer-events: none;      /* 👈 let clicks pass through by default */
+  font-family: inherit;
+}
+
+.foil-overlay.foil-hidden {
+  display: none;
+}
+
+.foil-backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 0%, rgba(0,0,0,0.35), rgba(0,0,0,0.85));
+  opacity: 0.9;
+  pointer-events: none;      /* 👈 backdrop itself never blocks clicks */
+}
+
+.foil-dialog {
+  position: relative;
+  max-width: 520px;
+  width: 90%;
+  background: rgba(20, 24, 32, 0.96);
+  border-radius: 16px;
+  border: 2px solid #f0b400;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.6);
+  padding: 20px 22px 18px;
+  color: #f9f9f9;
+  text-align: left;
+  pointer-events: auto;      /* 👈 only the dialog captures clicks */
+}
+
+/* rest as before... */
+.foil-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 6px;
+  text-shadow: 0 0 10px rgba(255,255,255,0.4);
+}
+
+.foil-subtitle {
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 10px;
+  color: #e3e3e3;
+}
+
+.foil-context {
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+
+.foil-monster-line {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.foil-requirement {
+  margin-bottom: 6px;
+  color: #ffe499;
+}
+
+.foil-tip {
+  font-size: 13px;
+  color: #d0d7ff;
+}
+
+.foil-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.foil-btn {
+  font: inherit;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  min-width: 160px;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+}
+
+.foil-btn-primary {
+  background: linear-gradient(135deg, #f0b400, #ffdf73);
+  color: #2a2108;
+  font-weight: 700;
+  border-color: #f3c53d;
+  box-shadow: 0 0 10px rgba(240, 180, 0, 0.6);
+}
+
+.foil-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 14px rgba(240, 180, 0, 0.9);
+}
+
+.foil-btn-ghost {
+  background: rgba(0,0,0,0.3);
+  color: #f9f9f9;
+  border-color: #666;
+}
+
+.foil-btn-ghost:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.foil-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* keep the dim, but spotlight the player's hand */
+.foil-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;                  /* overlay below the dialog but above board */
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 60px;
+  pointer-events: none;          /* clicks pass through except on dialog */
+}
+
+.foil-backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 0%, rgba(0,0,0,0.35), rgba(0,0,0,0.85));
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.foil-dialog {
+  position: relative;
+  z-index: 1000;                 /* above everything */
+  pointer-events: auto;          /* buttons work */
+}
+
+/* the player's hand stays bright and above the dim */
+.hand-zone,
+#hand-you {
+  position: relative;
+  z-index: 950;                  /* above backdrop (900), below dialog (1000) */
+}
+
+
 
 
 

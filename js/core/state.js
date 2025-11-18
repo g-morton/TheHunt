@@ -44,7 +44,14 @@ export const State = {
   sel: {
     hand:   new Set(),            // indices into State.you.hand
     roster: new Set(),            // indices into State.you.roster
+    enemyMonsterIdx: null,        // single CPU roster slot selected as target
     monster: null                 // { side: 'you'|'cpu', idx: number } or null
+  },
+
+  foil: {
+    active: false,        // true while the defender is choosing Hunters to Foil
+    defender: null,       // SIDES.YOU or SIDES.CPU (for future symmetry)
+    target: null          // the monster being hunted (optional, nice-to-have)
   },
 
   // Per-turn flags

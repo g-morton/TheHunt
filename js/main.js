@@ -16,6 +16,7 @@ import { endYourTurn } from './logic/endturn.js';
 import './logic/setup.js';
 import { render, updateSelectionHighlights } from './ui/render.js';
 import { log } from './core/log.js';
+import { showFoilPrompt } from './ui/foil.js';
 
 // ---------- Button helpers ----------
 function $(id){ return document.getElementById(id); }
@@ -28,6 +29,31 @@ const BTN = {
   endturn:  $('btn-endturn'),
   newgame:  $('btn-newgame')
 };
+
+
+
+
+
+// DEV ONLY: test Foil UI by pressing F on the keyboard
+window.addEventListener('keydown', (ev) => {
+  if (ev.key === 'f' || ev.key === 'F') {
+    showFoilPrompt(
+      {
+        monsterName: 'Dire Wolf Alpha',
+        monsterPower: 7,
+        requiredPower: 7
+      },
+      ({ decision, context }) => {
+        console.log('[FOIL decision]', decision, context);
+        // later: plug in real foil logic here
+      }
+    );
+  }
+});
+
+
+
+
 
 function setBtn(el, enabled, highlighted){
   if (!el) return;
@@ -134,18 +160,27 @@ function buildIntroRulesHtml(){
       claim the most 💰 <strong>Tender</strong> by defeating Monsters.
     </p>
 
+    <h3>Start of each turn</h3>
+    <ul>
+      <li>At the start of <strong>every turn</strong>, all cards in your 🤲 <strong>HAND</strong> are discarded to your 📂 <strong>BACKLOG</strong>.</li>
+      <li>You then draw a <strong>new hand</strong> from your 📦 <strong>STOCK</strong> up to your hand limit.</li>
+      <li>If your stock runs out while drawing, your backlog is 🔀 <strong>shuffled</strong> and becomes your new stock, and drawing continues.</li>
+      <li>Any Monsters drawn may be placed straight onto your 🧩 <strong>ROSTER</strong>; the remaining cards stay in your hand.</li>
+      <li>You play your entire turn using <strong>only</strong> this fresh hand and your current roster – no extra draws mid-turn.</li>
+    </ul>
+
     <h3>How your turn works</h3>
     <ul>
       <li>There are <strong>no fixed phases</strong> – you may use any actions in any order.</li>
-      <li>Select cards in your <strong>HAND</strong> and/or <strong>ROSTER</strong>.</li>
+      <li>Select cards in your 🤲 <strong>HAND</strong> and/or 🧩 <strong>ROSTER</strong>.</li>
       <li>Any valid actions for that selection will cause their buttons to <strong>light up</strong>.</li>
       <li>Click a lit button to perform that action.</li>
-      <li>When you’re done, click <strong>“I’m done”</strong> to end your turn.</li>
+      <li>When you’re done, click <strong>“I’m done”</strong> to end your turn and pass play to your opponent.</li>
     </ul>
 
     <h3>Core actions</h3>
     <ul>
-      <li><strong>Hunt</strong> – Spend Hunters from your hand to defeat a Monster on your roster. Gain its 💰 Tender; Hunters go to your backlog, the Monster is 🔥 burned.</li>
+      <li><strong>Hunt</strong> – Spend Hunters from your hand and/or roster to defeat a Monster on your roster (or, in advanced play, on the enemy’s). Gain its 💰 Tender when you hunt your own Monster; Hunters go to your backlog, the Monster is 🔥 burned.</li>
       <li><strong>Trade</strong> – Spend Supply from your hand to recruit a Hunter from your roster into your backlog (respecting their cost).</li>
       <li><strong>Resupply</strong> – Move Supply from your roster back to your backlog, then draw fresh cards.</li>
       <li><strong>Cull</strong> – 🔥 Burn a single unwanted card from your hand.</li>
@@ -153,11 +188,11 @@ function buildIntroRulesHtml(){
 
     <h3>Reading the board</h3>
     <ul>
-      <li><strong>Deck</strong> → where new cards are drawn from.</li>
-      <li><strong>Stock</strong> → your active draw pile.</li>
+      <li><strong>Deck</strong> → where new cards are drawn from at the start of the game.</li>
+      <li><strong>Stock</strong> → your active 📦 draw pile.</li>
       <li><strong>Roster</strong> → Monsters and Hunters “on the board”.</li>
-      <li><strong>Backlog</strong> → discard pile that is reshuffled into your stock when needed.</li>
-      <li><strong>Burn</strong> → cards removed from the game.</li>
+      <li><strong>Backlog</strong> → 📂 discard pile that is reshuffled into your stock when needed.</li>
+      <li><strong>Burn</strong> → 🔥 cards removed from the game.</li>
     </ul>
 
     <p class="intro-tip">
@@ -165,6 +200,7 @@ function buildIntroRulesHtml(){
     </p>
   </div>`;
 }
+
 
 // ---------- Boot sequence ----------
 async function boot() {
@@ -216,6 +252,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
 // ---------- New game entry point ----------
 export async function startNewGame(){
   // wipe & re-init base state
+  document.querySelector('#log').innerHTML = '';
   newGameState();
 
   // call your setup routine if present (V5 first, then fallbacks)

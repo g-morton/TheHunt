@@ -1,108 +1,123 @@
 // js/logic/hunt.js
 import { State, SIDES } from '../core/state.js';
-import { log } from '../core/log.js';
 import { topOf, num, isMonster, isHunter, checkWin } from './utils.js';
-import {
-  discardHuntersAfterHunt,
-  discardMonsterAfterHunt,
-  discardFoiledHunters
-} from './discard.js';
+import { log } from '../core/log.js';
 
-function normalizeSide(side){
-  // We want literal "you" / "cpu" keys for discard.js
-  return (side === SIDES.CPU || side === 'cpu') ? 'cpu' : 'you';
-}
-
-// ---------------------------------------------------
-// executeHunt()
-// - Hunters can be from hand and/or roster
-// - Target monster can be on your roster or CPU roster
-// - On success: monster removed & burned, hunters → backlog
-// - On fail: hunters burned
-// - IMPORTANT: roster slots are *not* refilled here; that
-//   only happens in endturn.js (V5 rule).
-// ---------------------------------------------------
+// Player Hunt: can target either your own roster OR the CPU's roster.
+// - Hunters come from your hand and/or your roster.
+// - If target is on your roster: you gain Tender equal to monster.tender.
+// - If target is on CPU roster: you gain NO Tender (pure disruption).
 export function executeHunt(){
   if (State.turn !== SIDES.YOU) return;
 
   const you = State.you;
+  const cpu = State.cpu;
 
-  // Selected cards
-  const selHandIdx   = Array.from(State.sel.hand);
-  const selRosterIdx = Array.from(State.sel.roster);
+  // ---- 1) Gather selected hunters ----
+  const selHandIdx   = Array.from(State.sel.hand || []);
+  const selRosterIdx = Array.from(State.sel.roster || []);
 
   const handHunters = selHandIdx
-    .map(i => ({ i, card: you.hand[i] }))
+    .map(i => ({ loc:'hand', idx:i, card: you.hand[i] }))
     .filter(x => isHunter(x.card));
 
   const rosterSel = selRosterIdx.map(idx => ({
+    loc: 'roster',
     idx,
     card: topOf(you.roster[idx] || [])
   }));
 
   const rosterHunters = rosterSel.filter(x => isHunter(x.card));
-  const rosterMonsters = rosterSel.filter(x => isMonster(x.card));
+  const rosterMonstersOnYou = rosterSel.filter(x => isMonster(x.card));
 
-  // Basic validity checks
-  if (!handHunters.length && !rosterHunters.length){
+  const allHunters = [...handHunters, ...rosterHunters];
+
+  if (!allHunters.length){
     log(`<p class="you">You must select at least one Hunter (from hand or roster) to Hunt.</p>`);
     return;
   }
-  if (rosterMonsters.length !== 1){
-    log(`<p class="you">You must select exactly one Monster in your roster to Hunt.</p>`);
+
+  // ---- 2) Resolve target monster: own roster OR CPU roster ----
+  let targetBoard = null;  // you or cpu
+  let targetSide  = null;  // 'you' or 'cpu'
+  let targetIdx   = -1;
+  let targetCard  = null;
+
+  const enemyIdx = State.sel.enemyMonsterIdx ?? null;
+
+  // Case A: exactly one monster on YOUR roster, and no enemy target selected
+  if (rosterMonstersOnYou.length === 1 && enemyIdx == null){
+    const t = rosterMonstersOnYou[0];
+    targetBoard = you;
+    targetSide  = SIDES.YOU;
+    targetIdx   = t.idx;
+    targetCard  = t.card;
+  }
+  // Case B: no monster on your roster, but one CPU roster slot chosen
+  else if (rosterMonstersOnYou.length === 0 && enemyIdx != null){
+    const stack = cpu.roster[enemyIdx] || [];
+    const top   = topOf(stack);
+    if (!top || !isMonster(top)){
+      log(`<p class="you">Selected CPU slot does not contain a Monster.</p>`);
+      return;
+    }
+    targetBoard = cpu;
+    targetSide  = SIDES.CPU;
+    targetIdx   = enemyIdx;
+    targetCard  = top;
+  }
+  // Case C: ambiguous selection (both own and enemy, or multiple own monsters)
+  else {
+    log(`<p class="you">You must choose exactly one Monster to Hunt (either yours or the CPU's).</p>`);
     return;
   }
 
-  const targetMonster = rosterMonsters[0];
+  // Safety
+  if (!targetBoard || !targetCard){
+    log(`<p class="you">No valid Monster found to Hunt.</p>`);
+    return;
+  }
 
-  // ----- POWER CHECK FIRST -----
-  const allHunters = [
-    ...handHunters.map(h => h.card),
-    ...rosterHunters.map(h => h.card),
-  ];
-  const totalPower = allHunters.reduce((sum, h) => sum + (num(h.power) || 0), 0);
-  const monsterPower = num(targetMonster.card.power) || 0;
+  // ---- 3) Power check BEFORE moving any cards ----
+  const totalPower = allHunters.reduce((sum, h) => sum + (num(h.card.power) || 0), 0);
+  const monsterPower = num(targetCard.power) || 0;
 
   if (totalPower < monsterPower){
-    // ❌ Hunt fails – DO NOTHING to the cards
+    // ❌ Hunt fails – no movement, clear selection to avoid weird follow-on
     log(`
       <p class="you">
         ❌ Hunt failed: your Hunters have <strong>${totalPower} power</strong>, 
-        but <strong>${targetMonster.card.name}</strong> has 
+        but <strong>${targetCard.name}</strong> has 
         <strong>${monsterPower} power</strong>.<br>
         No cards were lost.
       </p>
     `);
-    // leave selection as-is, or clear it if you prefer:
-    // State.sel.hand.clear();
-    // State.sel.roster.clear();
-    // window.dispatchEvent(new CustomEvent('selectionChanged'));
+
+    clearSelection();
     return;
   }
 
-  // ----- SUCCESSFUL HUNT -----
-  // 1) Remove monster from its roster slot -> burn
-  const monsterStack = you.roster[targetMonster.idx] || [];
-  const monsterPos = monsterStack.indexOf(targetMonster.card);
+  // ---- 4) SUCCESSFUL HUNT ----
+  // 4a) Remove monster from its owner's roster and burn it
+  const monsterStack = targetBoard.roster[targetIdx] || [];
+  const monsterPos   = monsterStack.indexOf(targetCard);
   if (monsterPos >= 0){
     monsterStack.splice(monsterPos, 1);
   }
-  you.burn.push(targetMonster.card);
+  targetBoard.burn.push(targetCard);
 
-  // 2) Move all selected Hunters (hand + roster) to backlog
-  // Hand hunters
-  const handIdxToMove = handHunters.map(h => h.i).sort((a,b)=>b-a);
+  // 4b) Move all selected Hunters (hand + roster) into YOUR backlog
   const huntedFromHand = [];
+  const handIdxToMove = handHunters.map(h => h.idx).sort((a,b)=>b-a);
   handIdxToMove.forEach(i => {
     const [card] = you.hand.splice(i, 1);
     if (card) huntedFromHand.push(card);
   });
 
-  // Roster hunters
   const huntedFromRoster = [];
   rosterHunters.forEach(h => {
     const stack = you.roster[h.idx] || [];
-    const pos = stack.indexOf(h.card);
+    const pos   = stack.indexOf(h.card);
     if (pos >= 0){
       const [card] = stack.splice(pos, 1);
       if (card) huntedFromRoster.push(card);
@@ -112,29 +127,46 @@ export function executeHunt(){
   const allSpentHunters = [...huntedFromHand, ...huntedFromRoster];
   you.backlog.push(...allSpentHunters);
 
-  // 3) Gain Tender from monster
-  const gain = num(targetMonster.card.tender) || 0;
-  you.tender = num(you.tender) + gain;
+  // 4c) Tender gain ONLY if target is on YOUR roster
+  let gain = 0;
+  if (targetSide === SIDES.YOU){
+    gain = num(targetCard.tender) || 0;
+    you.tender = num(you.tender) + gain;
+  }
 
   log(`
     <p class="you">
       ✅ Hunt success! Your Hunters (${totalPower} power) defeated 
-      <strong>${targetMonster.card.name}</strong> (${monsterPower}).<br>
-      You gain <strong>${gain} Tender</strong> 💰. 
-      Hunters are moved to your backlog, and the Monster is burned.
+      <strong>${targetCard.name}</strong> (${monsterPower}).<br>
+      ${
+        targetSide === SIDES.YOU
+          ? (gain
+              ? `You gain <strong>${gain} Tender</strong> 💰. `
+              : `This Monster yielded no Tender. `
+            )
+          : `You gain <strong>no Tender</strong> for disrupting the CPU's ranks. `
+      }
+      Your Hunters are moved to your backlog, and the Monster is burned.
     </p>
   `);
 
-  // 4) Clear selection, update UI, check win
-  State.sel.hand.clear();
-  State.sel.roster.clear();
-  State.sel.monster = null;
-
-  window.dispatchEvent(new CustomEvent('selectionChanged'));
+  // ---- 5) Clear selection & notify ----
+  clearSelection();
   window.dispatchEvent(new CustomEvent('stateChanged'));
 
+  // ---- 6) Win check ----
   const winner = checkWin?.();
   if (winner){
-    window.dispatchEvent(new CustomEvent('gameOver', { detail:{ winner }}));
+    window.dispatchEvent(new CustomEvent('gameOver', { detail: { winner } }));
   }
+}
+
+function clearSelection(){
+  State.sel.hand?.clear?.();
+  State.sel.roster?.clear?.();
+  State.sel.monster = null;
+  if ('enemyMonsterIdx' in State.sel){
+    State.sel.enemyMonsterIdx = null;
+  }
+  window.dispatchEvent(new CustomEvent('selectionChanged'));
 }

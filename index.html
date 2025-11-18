@@ -18,64 +18,77 @@
 
 
     <!-- CPU band -->
-    <section class="band cpu">
-      <div class="side-label vert">CPU</div>
-      <div class="band-inner">
-        <div class="cpu-matrix">
-          <!-- left piles -->
-          <div class="left-piles">
-            <div id="cpu-deck" class="pile slot"></div>
-            <div id="cpu-burn" class="pile slot"></div>
-          </div>
-          <!-- center area (roster + hand) -->
-          <div class="cpu-center">
-            <div id="cpu-roster" class="roster"></div>
-            <div id="cpu-hand" class="hand cpu-hand"></div>
-          </div>
-          <!-- right piles -->
-          <div class="right-piles">
-            <div id="cpu-stock" class="pile slot"></div>
-            <div id="cpu-backlog" class="pile slot"></div>
+<section class="band cpu">
+  <div class="side-label vert">CPU</div>
+  <div class="band-inner">
+    <div class="cpu-matrix">
+      <!-- LEFT: deck + burn in a row, tender underneath -->
+      <div class="left-piles">
+        <div class="pile-row">
+          <div id="cpu-deck" class="pile slot"></div>
+          <div id="cpu-burn" class="pile slot"></div>
+        </div>
 
-                    <div class="score cpu">
+        <div class="score cpu">
           <div class="label">CPU TENDER</div>
           <div class="value" id="tender-cpu">0</div>
         </div>
+      </div>
 
-            
-          </div>
+      <!-- CENTER: roster on top, hand below -->
+      <div id="cpu-roster" class="roster"></div>
+
+      <!-- RIGHT: stock + backlog on same row as hand -->
+      <div class="right-piles">
+        <div class="pile-row">
+          <div id="cpu-stock" class="pile slot"></div>
+          <div id="cpu-backlog" class="pile slot"></div>
         </div>
       </div>
-    </section>
+
+      <div id="cpu-hand" class="hand cpu-hand"></div>
+    </div>
+  </div>
+</section>
+
 
       <!-- PLAYER band -->
-      <section class="band player">
-        <div class="side-label vert">PLAYER</div>
-        <div class="band-inner">
-          <div class="player-matrix">
-            <div class="left-piles">
-              <div id="player-deck" class="pile slot"></div>
-              <div id="player-burn" class="pile slot"></div>
-            </div>
-            <div id="roster" class="roster"></div>
-            <div class="right-piles">
-              <div id="player-stock" class="pile slot"></div>
-              <div id="player-backlog" class="pile slot"></div>
+<section class="band player">
+  <div class="side-label vert">PLAYER</div>
+  <div class="band-inner">
+    <div class="player-matrix">
+      <!-- LEFT: deck + burn in a row, tender underneath -->
+      <div class="left-piles">
+        <div class="pile-row">
+          <div id="player-deck" class="pile slot"></div>
+          <div id="player-burn" class="pile slot"></div>
+        </div>
 
         <div class="score you">
           <div class="label">PLAYER TENDER</div>
           <div class="value" id="tender-you">0</div>
         </div>
+      </div>
 
-            </div>
-            <div id="hand" class="hand"></div>
-          </div>
+      <!-- CENTER: roster on top, hand below -->
+      <div id="roster" class="roster"></div>
+
+      <!-- RIGHT: stock + backlog aligned with hand row -->
+      <div class="right-piles">
+        <div class="pile-row">
+          <div id="player-stock" class="pile slot"></div>
+          <div id="player-backlog" class="pile slot"></div>
         </div>
-      </section>
+      </div>
+
+      <div id="hand" class="hand hand-zone"></div>
+    </div>
+  </div>
+</section>
+
 
       <!-- PHASE BAR -->
       <footer class="actionbar">
-        
         
         <div class="phases">
 
@@ -118,6 +131,49 @@
     </div>
   </div>
 </div>
+
+
+<div id="foil-overlay" class="foil-overlay foil-hidden">
+  <div class="foil-backdrop"></div>
+  <div class="foil-dialog">
+    <div class="foil-title">🛡️ FOIL Opportunity!</div>
+    <div class="foil-subtitle">
+      Your opponent is attempting a Hunt!
+    </div>
+
+    <div class="foil-context">
+      <div class="foil-monster-line">
+        Target: <span id="foil-monster-name">Unknown Monster</span>
+        (<span id="foil-monster-power">P?</span>)
+      </div>
+
+      <!-- Attacking hunters summary -->
+      <div class="foil-attackers-line" id="foil-attackers-line">
+        <!-- e.g. Opponent is attacking with: Pediteer (F2), Skold (F4) -->
+      </div>
+
+      <div class="foil-requirement">
+        Your committed Hunters provide <strong>Foil (F)</strong> power that cancels
+        the same amount of the attacker’s Hunter power.
+      </div>
+      <div class="foil-tip">
+        💡 Select Hunters in your HAND and/or ROSTER that you’re willing to lose, then choose:
+        <br>• <strong>FOIL</strong> to block part (or all) of the Hunt, or
+        <br>• <strong>PASS</strong> to allow the Hunt to proceed unchallenged.
+      </div>
+    </div>
+
+    <div class="foil-actions">
+      <button id="foil-confirm" class="foil-btn foil-btn-primary">
+        🗡️ Use Hunters to FOIL
+      </button>
+      <button id="foil-pass" class="foil-btn foil-btn-ghost">
+        ⚔️ PASS – Allow the Hunt
+      </button>
+    </div>
+  </div>
+</div>
+
 
 
   <script type="module" src="./js/main.js"></script>
