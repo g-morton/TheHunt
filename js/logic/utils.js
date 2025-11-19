@@ -1,6 +1,7 @@
 // js/logic/utils.js
 import { State } from '../core/state.js';
 import { log } from '../core/log.js';
+import { playSfx } from '../core/sound.js';
 
 export function topOf(stack){ return stack?.[stack.length - 1] || null; }
 export function num(x){ const n = Number(x); return Number.isFinite(n) ? n : 0; }
@@ -31,19 +32,52 @@ export function ensureStockFromBacklog(board, min = 1){
   shuffle(board.backlog);
   board.stock.push(...board.backlog);
   board.backlog.length = 0;
+
+    playSfx('cardShuffle');
 }
 
 export function autoRosterMonsters(cards, board){
   const keep = [];
+  let placedCount = 0;
+
   for (const c of cards){
     if (isMonster(c)){
+
+      // --- Your existing distribution logic (unchanged) ---
       let target = 0, best = board.roster[0].length;
-      for (let i=1;i<board.roster.length;i++){
-        if (board.roster[i].length < best){ best = board.roster[i].length; target = i; }
+      for (let i = 1; i < board.roster.length; i++){
+        if (board.roster[i].length < best){
+          best = board.roster[i].length;
+          target = i;
+        }
       }
+
       board.roster[target].push(c);
-    } else keep.push(c);
+      placedCount++;
+
+      // --- NEW: Logging for transparency ---
+      const sideLabel = (board === State.you) ? 'you' : 'cpu';
+      const colorDot  = (board === State.you) ? '🟩' : '🟥';
+
+      log(`
+        <p class="${sideLabel}">
+          ${colorDot}
+          <strong>${c.name}</strong>
+          moves to ${sideLabel === 'you' ? 'your' : 'CPU’s'}
+          <strong>Roster Slot ${target + 1}</strong>.
+        </p>
+      `);
+
+    } else {
+      keep.push(c);
+    }
   }
+
+  // 🔊 NEW: Play placement sound *once* after all monsters placed
+  if (placedCount > 0){
+    playSfx('cardPlaced');
+  }
+
   return keep;
 }
 
@@ -72,3 +106,32 @@ export function checkWin(){
 
   return null;
 }
+
+
+export function isRegimented(card){
+  if (!card) return false;
+
+  // Support a few possible shapes: trait, traits[], tags, tags[]
+  if (Array.isArray(card.traits) &&
+      card.traits.some(t => String(t).toLowerCase() === 'regimented')){
+    return true;
+  }
+
+  if (typeof card.trait === 'string' &&
+      card.trait.toLowerCase() === 'regimented'){
+    return true;
+  }
+
+  if (Array.isArray(card.tags) &&
+      card.tags.some(t => String(t).toLowerCase() === 'regimented')){
+    return true;
+  }
+
+  if (typeof card.tags === 'string' &&
+      card.tags.toLowerCase().includes('regimented')){
+    return true;
+  }
+
+  return false;
+}
+

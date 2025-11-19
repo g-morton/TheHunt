@@ -2,6 +2,7 @@
 
 import { State, SIDES, GAME } from '../core/state.js';
 import { isMonster } from '../logic/utils.js'; 
+import { playSfx } from '../core/sound.js';
 
 function $(id){ return document.getElementById(id); }
 function el(tag, cls){ const n = document.createElement(tag); if (cls) n.className = cls; return n; }
@@ -21,6 +22,8 @@ function canSelectAsYou(){
 function onClickYourHandCard(idx){
   if (!canSelectAsYou()) return;
 
+    playSfx('cardSelection');
+
   const sel = State.sel.hand ?? new Set();
   if (sel.has(idx)) sel.delete(idx);
   else sel.add(idx);
@@ -37,25 +40,12 @@ function onClickYourRosterSlot(idx){
   if (sel.has(idx)) sel.delete(idx);
   else sel.add(idx);
 
+    playSfx('cardSelection');
+
   State.sel.roster = sel;
   window.dispatchEvent(new CustomEvent('selectionChanged'));
 }
 
-/*
-function toggleSelectHand(idx){
-  if (State.turn !== SIDES.YOU) return;
-  if (State.sel.hand.has(idx)) State.sel.hand.delete(idx);
-  else State.sel.hand.add(idx);
-  window.dispatchEvent(new CustomEvent('selectionChanged'));
-}
-
-function toggleSelectRoster(idx){
-  if (State.turn !== SIDES.YOU) return;
-  if (State.sel.roster.has(idx)) State.sel.roster.delete(idx);
-  else State.sel.roster.add(idx);
-  window.dispatchEvent(new CustomEvent('selectionChanged'));
-}
-  */
 
 export function updateSelectionHighlights(){
   // Hand: indices stored in State.sel.hand (Set of numbers)
@@ -90,25 +80,45 @@ export function updateSelectionHighlights(){
 function renderPile(rootId, cards, faceDown = false) {
   const root = document.getElementById(rootId);
   if (!root) return;
+
   root.innerHTML = '';
-  const top = cards[cards.length - 1] || null;
+
+  const count = cards.length;
+
+  // --- NEW: If empty, show an empty pile box only ---
+  if (count === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'pile empty';
+    root.appendChild(empty);
+
+    const badge = document.createElement('div');
+    badge.className = 'pile-count';
+    badge.textContent = '0';
+    root.appendChild(badge);
+
+    return;
+  }
+
+  // --- Otherwise: show card-back (CPU / stock piles) or top card (player piles) ---
+  const top = cards[count - 1];
   let face;
+
   if (faceDown) {
-    // render card back
     face = document.createElement('div');
     face.className = 'card card-back pile-top';
   } else {
-    // render real card
     face = renderCard(top);
     face.classList.add('pile-top');
   }
+
   root.appendChild(face);
-  // count badge
-  const count = document.createElement('div');
-  count.className = 'pile-count';
-  count.textContent = cards.length;
-  root.appendChild(count);
+
+  const badge = document.createElement('div');
+  badge.className = 'pile-count';
+  badge.textContent = count;
+  root.appendChild(badge);
 }
+
 
 // --------- Image helper (background-based) ---------
 const IMG_EXTS = ['jpg','png','webp'];

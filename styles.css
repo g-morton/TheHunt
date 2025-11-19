@@ -206,8 +206,9 @@ body{
   min-height:calc(var(--card-h) + 40px);
 }
 #player-roster::after,
+#roster::after,
 #cpu-roster::after,
-#player-hand::after, #cpu-hand::after{
+#player-hand::after, #cpu-hand::after, #hand::after{
   position:absolute;
   bottom:6px;
   left:50%;
@@ -221,9 +222,12 @@ body{
   padding:2px 8px;
   pointer-events:none;
 }
-#player-roster::after{content:'ROSTER'}
+#roster::after{content:'ROSTER'}
 #cpu-roster::after{content:'ROSTER'}
 #player-hand::after{content:'HAND'}
+
+
+
 
 .pile.slot{
   width:var(--card-w);
@@ -251,11 +255,13 @@ body{
   border-radius:999px;
   padding:2px 8px;
   pointer-events:none;
+  z-index: 1000
 }
 #player-deck::after{content:'DECK'}
 #player-stock::after{content:'STOCK'}
 #player-backlog::after{content:'BACKLOG'}
 #player-burn::after{content:'BURN'}
+#hand::after{content:'HAND'}
 #cpu-deck::after{content:'DECK'}
 #cpu-burn::after{content:'BURN'}
 #cpu-hand::after{content:'HAND'}

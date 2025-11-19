@@ -5,21 +5,46 @@ import { ensureStockFromBacklog, draw, autoRosterMonsters } from './utils.js';
 import { log } from '../core/log.js';
 
 // Shared start-of-turn refresh for a given board
-function sharedStartOfTurn(board /*, side*/){
+function sharedStartOfTurn(board /*, side*/) {
   board.hand    = board.hand    || [];
   board.stock   = board.stock   || [];
   board.backlog = board.backlog || [];
   board.roster  = board.roster  || [];
   board.deck    = board.deck    || [];
 
+  const isYou = (board === State.you);
+  const loser  = isYou ? 'you' : 'cpu';
+  const winner = isYou ? 'cpu' : 'you';
+
+  // --- 0) LOSS CONDITION ---
+  // If the player begins their turn with:
+  //   • an empty hand
+  //   • AND an empty stock
+  // …then they cannot draw new cards and the game must end.
+  if (board.hand.length === 0 && board.stock.length === 0 && board.backlog.length === 0) {
+    log(`
+      <p class="${loser}">
+        ❌ <strong>${loser.toUpperCase()}</strong> has no cards in hand,
+        and no Stock to draw from.<br>
+        They cannot continue the Hunt.<br>
+        <strong>GAME OVER.</strong>
+      </p>
+    `);
+
+    window.dispatchEvent(new CustomEvent('gameOver', {
+      detail: { winner }
+    }));
+
+    return; // Stop turn setup entirely
+  }
+
   // 1) Move current hand to backlog
-  if (board.hand.length){
+  if (board.hand.length) {
     board.backlog.push(...board.hand);
     board.hand.length = 0;
   }
 
-  // 2) Ensure stock is loaded from backlog if needed
-  //    (extra arguments are ignored if ensureStockFromBacklog only expects 1)
+  // 2) Ensure stock is loaded from backlog (if needed)
   ensureStockFromBacklog(board, GAME.HAND_SIZE);
 
   // 3) Draw fresh hand (up to HAND_SIZE)
@@ -31,6 +56,7 @@ function sharedStartOfTurn(board /*, side*/){
   // 5) Remaining drawn cards become the new hand
   board.hand.push(...drawn);
 }
+
 
 // PLAYER: start of your turn
 export function startPlayerTurn(){

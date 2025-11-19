@@ -8,7 +8,8 @@ import {
   isSupply,
   num,
   topOf,
-  checkWin
+  checkWin,
+  isRegimented
 } from './utils.js';
 import { suppliesMeetRequirements } from './trade.js';
 import {
@@ -28,6 +29,7 @@ import {
   discardFoiledHunters,
   promptPlayerFoil
 } from './cpu-foil.js';
+import { playSfx } from '../core/sound.js';
 
 
 const CPU_DELAY = 500; // ms between actions — tweak to taste
@@ -173,6 +175,23 @@ async function cpuDoHunt(){
 
   const monster      = target.card;
   const monsterPower = num(monster.power);
+
+// Regimented rule for CPU too:
+  // if it plans to use exactly ONE Regimented Hunter, cancel the hunt.
+  const cpuRegimented = hunters.filter(h => isRegimented(h));
+  if (cpuRegimented.length === 1){
+    const lone = cpuRegimented[0];
+    log(`
+      <p class="cpu">
+        ⚠️ CPU cancels this Hunt: <strong>${lone.name}</strong> is 
+        <strong>Regimented</strong> and requires at least two Regimented Hunters
+        to embark together.
+      </p>
+    `);
+    await sleep(CPU_DELAY);
+    return false;
+  }
+
   const ownerLabel   = (target.side === 'you' || target.side === SIDES.YOU)
     ? 'YOUR roster'
     : 'CPU roster';
@@ -180,6 +199,8 @@ async function cpuDoHunt(){
   const hunterListText = hunters
     .map(h => `${h.name || 'Hunter'} (P${num(h.power)})`)
     .join(', ') || 'none';
+
+  playSfx('huntStart');
 
   log(`
     <p class="phase-step cpu">
@@ -250,6 +271,8 @@ async function cpuDoHunt(){
         hunters      = foilOutcome.survivors;
         huntersPower = huntersPower - foilOutcome.removedPower;
       } else {
+        playSfx('huntWin');
+
         log(`
           <p class="you">
             You selected <strong>FOIL</strong> but no valid Hunters were chosen,
@@ -269,6 +292,7 @@ async function cpuDoHunt(){
         window.dispatchEvent(new CustomEvent('selectionChanged'));
       }
     } else if (decision === 'pass'){
+      playSfx('huntWin');
       log(`
         <p class="you">
           You allow the CPU's Hunt to proceed without Foil.
@@ -293,6 +317,7 @@ async function cpuDoHunt(){
   });
 
   if (foilUsed && foilRemovedPower > 0){
+    playSfx('huntFoiled');
     log(`
       <p class="you">
         🛡️ Your Foil neutralises ${foiledNames.length} CPU hunter(s)
@@ -345,6 +370,7 @@ async function cpuDoHunt(){
     const gain = Number(target.card.tender || 0);
     if (gain > 0){
       cpu.tender = Number(cpu.tender || 0) + gain;
+      playSfx('huntWin');
       log(`
         <p class='cpu'>
           ✅ <strong>CPU Hunt succeeds</strong> against its own monster 
@@ -386,19 +412,66 @@ async function cpuDoHunt(){
 
 
 // ---------------------------------------------------------------------------
-// CPU TRADE (simplified)
+// CPU TRADE
 // ---------------------------------------------------------------------------
 
-// Very simple trade: if CPU has supplies and a hunter it can pay for, trade it
-// into backlog using supplies from hand.
+
+function tryBuildCpuPayment(hunter, suppliesInHand){
+  if (!hunter.requires) return null;  // no cost? ignore (or auto afford)
+
+  const req = hunter.requires;
+  const payment = [];
+  const supplyPool = [...suppliesInHand];
+
+  // Pay specific types first (Kit, Script, Treacle)
+  for (const [type, amount] of Object.entries(req)){
+    if (type === 'any') continue;
+
+    let need = amount;
+    for (let i = supplyPool.length - 1; i >= 0 && need > 0; i--){
+      const card = supplyPool[i];
+      if (card.t === type){
+        payment.push(card);
+        supplyPool.splice(i, 1);
+        need--;
+      }
+    }
+
+    if (need > 0){
+      return null; // Cannot pay required type
+    }
+  }
+
+  // Now pay mutually-flexible "any" cards
+  const anyAmount = req.any || 0;
+  if (anyAmount > 0){
+    for (let i = supplyPool.length - 1; i >=0 && payment.length < (anyAmount + payment.length); i--){
+      const card = supplyPool[i];
+      if (isSupply(card)){
+        payment.push(card);
+        supplyPool.splice(i, 1);
+      }
+    }
+
+    if (payment.length < Object.keys(req).filter(k => k !== 'any').reduce((a,k)=>a+req[k],0) + anyAmount){
+      return null; // Not enough flexible supplies
+    }
+  }
+
+  return payment;
+}
+
+
 async function cpuDoTrade(){
   const cpu = State.cpu;
 
+  // Supplies in hand
   const suppliesInHand = cpu.hand.filter(c => isSupply(c));
   if (!suppliesInHand.length) return false;
 
+  // Hunters on roster
   const hunters = [];
-  cpu.roster.forEach((stack, idx)=>{
+  cpu.roster.forEach((stack, idx) => {
     const top = stack && stack[stack.length - 1];
     if (isHunter(top)){
       hunters.push({ idx, card: top });
@@ -406,27 +479,31 @@ async function cpuDoTrade(){
   });
   if (!hunters.length) return false;
 
-  // Find all hunters we can legitimately pay for
-  const possibleTrades = hunters
-    .filter(h => suppliesMeetRequirements(h.card, suppliesInHand));
+  // All hunters that CPU CAN pay for
+  const affordable = hunters
+    .map(h => ({
+      ...h,
+      payment: tryBuildCpuPayment(h.card, suppliesInHand)  // NEW: exact payment
+    }))
+    .filter(h => h.payment !== null);
 
-  if (!possibleTrades.length) return false;
+  if (!affordable.length) return false;
 
-  // For now, just pick one at random
-  const choice = randomPick(possibleTrades);
-  const { idx: hunterSlot, card: hunterCard } = choice;
+  // Choose cheapest or strongest?
+  // For now: cheapest supply cost
+  affordable.sort((a, b) => a.payment.length - b.payment.length);
 
-  // CPU pays with ALL supplies in hand that were considered
-  const paySupplies = [...suppliesInHand];
+  const choice = affordable[0];
+  const { idx: slot, card: hunterCard, payment } = choice;
 
-  // Remove paid supplies from CPU hand
-  paySupplies.forEach(card => {
+  // Remove used supplies from CPU hand
+  payment.forEach(card => {
     const ix = cpu.hand.indexOf(card);
     if (ix >= 0) cpu.hand.splice(ix, 1);
   });
 
-  // Remove hunter from its roster slot
-  const stack = cpu.roster[hunterSlot] || [];
+  // Remove hunter from roster (top or fallback)
+  const stack = cpu.roster[slot] || [];
   if (stack.length && stack[stack.length - 1] === hunterCard){
     stack.pop();
   } else {
@@ -434,13 +511,17 @@ async function cpuDoTrade(){
     if (pos >= 0) stack.splice(pos, 1);
   }
 
-  // Move hunter + supplies to backlog
-  discardTrade('cpu', hunterCard, paySupplies);
+  // Move traded hunter and spent supplies to backlog
+  discardTrade('cpu', hunterCard, payment);
+
+  // Logging (super clear)
+  const payList = payment.map(c => c.name || c.t || '?').join(', ');
 
   log(`
     <p class="phase-step cpu">
-      💱 CPU trades <strong>${hunterCard.name}</strong> using 
-      ${paySupplies.length} Supply card(s).
+      💱 CPU trades <strong>${hunterCard.name}</strong><br>
+      🔧 Paid using: <strong>${payList}</strong><br>
+      📦 ${payment.length} Supply card(s) consumed.
     </p>
   `);
 
@@ -448,6 +529,7 @@ async function cpuDoTrade(){
   await sleep(CPU_DELAY);
   return true;
 }
+
 
 // ---------------------------------------------------------------------------
 // CPU RESUPPLY
@@ -491,28 +573,41 @@ async function cpuDoResupply(){
 
 async function cpuDoCull(){
   const cpu = State.cpu;
-  if (!cpu.hand.length) return false;
 
-  // Cull the "worst" card: lowest power, then lowest tender
-  const sorted = [...cpu.hand].sort((a,b)=>{
-    const ap = num(a.power);
-    const bp = num(b.power);
-    if (ap !== bp) return ap - bp;
-    const at = num(a.tender);
-    const bt = num(b.tender);
-    return at - bt;
-  });
+  // --- NEW: Guardrails to prevent CPU self-destruction ---
+  const totalCards =
+    cpu.deck.length +
+    cpu.stock.length +
+    cpu.backlog.length +
+    cpu.hand.length +
+    cpu.roster.reduce((a, s) => a + s.length, 0);
 
-  const victim = sorted[0];
-  const ix = cpu.hand.indexOf(victim);
-  if (ix < 0) return false;
+  const huntersInHand = cpu.hand.filter(c => isHunter(c)).length;
 
-  cpu.hand.splice(ix, 1);
-  discardCull('cpu', victim);
+  if (
+    cpu.hand.length <= 3 ||          // Preserve minimum hand
+    cpu.stock.length <= 3 ||         // Keep enough stock for a redraw
+    cpu.backlog.length === 0 ||      // Don’t cull before reshuffle
+    totalCards < 10 ||               // Danger: low total card count
+    huntersInHand <= 2               // Keep minimal hunting force
+  ){
+    return false;
+  }
+
+  // --- Existing cull logic (choose weakest card, burn it) ---
+  const cullCandidates = cpu.hand.filter(c => !isHunter(c));
+  if (!cullCandidates.length) return false;
+
+  const target = randomPick(cullCandidates);
+
+  const ix = cpu.hand.indexOf(target);
+  if (ix >= 0) cpu.hand.splice(ix, 1);
+
+  cpu.burn.push(target);
 
   log(`
     <p class="phase-step cpu">
-      🗑️ CPU culls <strong>${victim.name}</strong> from its hand.
+      🗑️ CPU culls <strong>${target.name || target.t}</strong>.
     </p>
   `);
 
@@ -520,6 +615,7 @@ async function cpuDoCull(){
   await sleep(CPU_DELAY);
   return true;
 }
+
 
 // ---------------------------------------------------------------------------
 // CPU TURN DRIVER

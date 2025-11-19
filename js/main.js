@@ -17,6 +17,7 @@ import './logic/setup.js';
 import { render, updateSelectionHighlights } from './ui/render.js';
 import { log } from './core/log.js';
 import { showFoilPrompt } from './ui/foil.js';
+import { playSfx } from './core/sound.js';
 
 // ---------- Button helpers ----------
 function $(id){ return document.getElementById(id); }
@@ -129,11 +130,13 @@ function wireEvents(){
 
     if (overlay && winnerEl){
       if (winner === 'you'){
+        playSfx('endgameWin');
         winnerEl.textContent = 'Victory! You dominate the Hunt.';
         if (summaryEl){
           summaryEl.textContent = 'Your Hunters stand alone amid the wreckage. The CPU slinks away in defeat.';
         }
       } else if (winner === 'cpu'){
+        playSfx('endgameLose');
         winnerEl.textContent = 'Defeat. The CPU claims the field.';
         if (summaryEl){
           summaryEl.textContent = 'Your deck is spent. The Hunt is lost… for now.';
@@ -180,9 +183,9 @@ function buildIntroRulesHtml(){
 
     <h3>Core actions</h3>
     <ul>
-      <li><strong>Hunt</strong> – Spend Hunters from your hand and/or roster to defeat a Monster on your roster (or, in advanced play, on the enemy’s). Gain its 💰 Tender when you hunt your own Monster; Hunters go to your backlog, the Monster is 🔥 burned.</li>
+      <li><strong>Hunt</strong> – Spend Hunters from your hand to defeat a Monster on your roster or on the opponent's). Gain its 💰 Tender when you hunt your own Monster; Hunters go to your backlog, the Monster is 🔥 burned.</li>
       <li><strong>Trade</strong> – Spend Supply from your hand to recruit a Hunter from your roster into your backlog (respecting their cost).</li>
-      <li><strong>Resupply</strong> – Move Supply from your roster back to your backlog, then draw fresh cards.</li>
+      <li><strong>Resupply</strong> – Move Supply from your roster back to your backlog.</li>
       <li><strong>Cull</strong> – 🔥 Burn a single unwanted card from your hand.</li>
     </ul>
 
@@ -190,13 +193,13 @@ function buildIntroRulesHtml(){
     <ul>
       <li><strong>Deck</strong> → where new cards are drawn from at the start of the game.</li>
       <li><strong>Stock</strong> → your active 📦 draw pile.</li>
-      <li><strong>Roster</strong> → Monsters and Hunters “on the board”.</li>
-      <li><strong>Backlog</strong> → 📂 discard pile that is reshuffled into your stock when needed.</li>
+      <li><strong>Roster</strong> → Monsters, Hunters and new Supply “on the board”.</li>
+      <li><strong>Backlog</strong> → 📂 discard pile that is reshuffled back into your stock when needed.</li>
       <li><strong>Burn</strong> → 🔥 cards removed from the game.</li>
     </ul>
 
     <p class="intro-tip">
-      When you’re ready, click <strong>START NEW GAME</strong> above to deal decks and begin.
+      When you’re ready, click <strong>START NEW GAME</strong> above to deal decks and begin <strong>The Hunt!</strong>
     </p>
   </div>`;
 }
@@ -251,6 +254,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 // ---------- New game entry point ----------
 export async function startNewGame(){
+
+  playSfx('newgame');
+
   // wipe & re-init base state
   document.querySelector('#log').innerHTML = '';
   newGameState();

@@ -3,6 +3,7 @@
 import { State, SIDES } from '../core/state.js';
 import { topOf, isSupply, isHunter } from './utils.js';
 import { log } from '../core/log.js';
+import { playSfx } from '../core/sound.js';
 
 
 import {
@@ -158,7 +159,7 @@ export function executeTrade(){
   }
 
   State.you.backlog.push(hunterCard, ...movedSupply);
-
+  playSfx('cardPlaced');
   log(`
     <p class="you">
       💱 Trade: You cycled <strong>${hunterCard.name}</strong> and 

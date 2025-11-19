@@ -3,6 +3,7 @@
 import { State, SIDES } from '../core/state.js';
 import { discardCull } from './discard.js';
 import { log } from '../core/log.js';
+import { playSfx } from '../core/sound.js';
 
 // -----------------------------------------------------------
 // executeCull()
@@ -29,7 +30,7 @@ export function executeCull(){
   // Optional per-turn limiter
   State.cullUsed = true;
 
-
+  playSfx('cardPlaced');
   log(`
     <p class="you">
       🔥 Cull: You burned <strong>${card.name}.
