@@ -17,70 +17,80 @@
       </header>
 
 
-    <!-- CPU band -->
+<!-- CPU band -->
 <section class="band cpu">
   <div class="side-label vert">CPU</div>
   <div class="band-inner">
     <div class="cpu-matrix">
-      <!-- LEFT: deck + burn in a row, tender underneath -->
+      <!-- LEFT: deck + burn on top, stock + backlog below -->
       <div class="left-piles">
         <div class="pile-row">
           <div id="cpu-deck" class="pile slot"></div>
           <div id="cpu-burn" class="pile slot"></div>
         </div>
-
-        <div class="score cpu">
-          <div class="label">CPU TENDER</div>
-          <div class="value" id="tender-cpu">0</div>
-        </div>
-      </div>
-
-      <!-- CENTER: roster on top, hand below -->
-      <div id="cpu-roster" class="roster"></div>
-
-      <!-- RIGHT: stock + backlog on same row as hand -->
-      <div class="right-piles">
         <div class="pile-row">
           <div id="cpu-stock" class="pile slot"></div>
           <div id="cpu-backlog" class="pile slot"></div>
         </div>
       </div>
 
+      <!-- CENTER: roster -->
+      <div id="cpu-roster" class="roster"></div>
+
+      <!-- RIGHT: both Tender scores (scoreboard) -->
+      <div class="right-piles">
+        <div class="score-panel">
+          <div class="score cpu">
+            <div class="label">CPU TENDER</div>
+            <div class="value" id="tender-cpu">0</div>
+          </div>
+          <div class="score you">
+            <div class="label">PLAYER TENDER</div>
+            <div class="value" id="tender-you">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HAND row -->
       <div id="cpu-hand" class="hand cpu-hand"></div>
     </div>
   </div>
 </section>
 
 
-      <!-- PLAYER band -->
+<!-- PLAYER band -->
 <section class="band player">
   <div class="side-label vert">PLAYER</div>
   <div class="band-inner">
     <div class="player-matrix">
-      <!-- LEFT: deck + burn in a row, tender underneath -->
+      <!-- LEFT: deck + burn on top, stock + backlog below -->
       <div class="left-piles">
         <div class="pile-row">
           <div id="player-deck" class="pile slot"></div>
           <div id="player-burn" class="pile slot"></div>
         </div>
-
-        <div class="score you">
-          <div class="label">PLAYER TENDER</div>
-          <div class="value" id="tender-you">0</div>
-        </div>
-      </div>
-
-      <!-- CENTER: roster on top, hand below -->
-      <div id="roster" class="roster"></div>
-
-      <!-- RIGHT: stock + backlog aligned with hand row -->
-      <div class="right-piles">
         <div class="pile-row">
           <div id="player-stock" class="pile slot"></div>
           <div id="player-backlog" class="pile slot"></div>
         </div>
       </div>
 
+      <!-- CENTER: roster -->
+      <div id="roster" class="roster"></div>
+
+      <!-- RIGHT: card-detail / traits inspector -->
+      <div class="right-piles">
+        <div class="inspector-panel">
+          <div class="inspector-title">Card details</div>
+          <div id="card-inspector" class="card-inspector empty">
+            <p class="inspector-hint">
+              Hover or select a card to see its details and traits.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- HAND row -->
       <div id="hand" class="hand hand-zone"></div>
     </div>
   </div>
@@ -106,14 +116,16 @@
       </footer>
     </section>
 
-    <!-- LOG / SCORE -->
-    <aside class="log-col">
-      <div class="log-panel">
-        <div class="log-title">GAME LOG</div>
-        <div id="log" class="log"></div>
-      </div>
-    </aside>
+<!-- LOG column -->
+<aside class="log-col">
+  <div class="log-panel">
+    <div class="log-title">GAME LOG</div>
+    <div id="log" class="log"></div>
   </div>
+</aside>
+
+
+
 
 
 <!-- Game Over Overlay -->

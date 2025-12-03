@@ -29,13 +29,11 @@ body{
 }
 .app-shell{
   width:100%;
-  max-width:1920px;
   margin:0 auto;
   display:grid;
-  grid-template-columns:68% 32%;
+  /* Left: board, capped; Right: log, flexible */
+  grid-template-columns: minmax(0, 1250px) minmax(260px, 1fr);
   gap:var(--gap);
-  padding:var(--gap);
-  height:100vh;
 }
 
 
@@ -128,6 +126,7 @@ body{
 .hand {
   overflow: visible;   /* was the problem before */
   position: relative;
+  justify-content: flex-start;
 }
 .side-label.vert{
   position:absolute;left:12px;top:10px;bottom:10px;
@@ -139,8 +138,13 @@ body{
 .cpu-matrix,
 .player-matrix {
   display: grid;
-  grid-template-columns: min-content 1fr min-content;
-  grid-template-rows: auto auto;      /* row 1: roster row, row 2: hand row */
+  /* Left: piles   | Middle: cards (capped) | Right: scores/details */
+  grid-template-columns:
+    minmax(0, 240px)   /* left-piles */
+    minmax(0, 640px)   /* roster + hand strip */
+    minmax(0, 320px);  /* right-piles: scores / card details */
+
+  grid-template-rows: auto auto;
   gap: var(--gap);
   align-items: start;
 }
@@ -178,11 +182,11 @@ body{
 /* RIGHT: stock + backlog aligned to hand row */
 .right-piles {
   grid-column: 3;
-  grid-row: 2;
+  grid-row: 1 / span 2;   /* span both rows (roster + hand) */
   display: flex;
   flex-direction: column;
   gap: var(--gap);
-  align-items: flex-end;
+  align-items: stretch;
 }
 
 
@@ -861,6 +865,115 @@ button.highlight {
   z-index: 950;                  /* above backdrop (900), below dialog (1000) */
 }
 
+
+/* Scoreboard panel sitting next to CPU band */
+.score-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+
+/* Card detail / traits inspector beside PLAYER band */
+
+.inspector-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inspector-title {
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-align: center;
+  font-size: 12px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--panel-border);
+  padding-bottom: 4px;
+}
+
+.card-inspector {
+  font-size: 13px;
+  line-height: 1.35;
+  color: #e5edf7;
+}
+
+.card-inspector.empty {
+  opacity: 0.7;
+}
+
+.inspector-hint {
+  margin: 0;
+  font-style: italic;
+}
+
+/* These will be used when we render real content into the inspector */
+.inspector-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.inspector-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.inspector-sub {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.inspector-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.inspector-stat-pill {
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.35);
+  font-size: 11px;
+}
+
+.inspector-traits {
+  border-top: 1px dashed rgba(255,255,255,0.1);
+  padding-top: 4px;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inspector-trait {
+    font-size: 13px;
+    border-radius: 10px;
+    background-color: olivedrab;
+    padding: 15px;
+}
+
+.inspector-trait-label {
+  font-weight: 600;
+  font-size: larger;
+}
+
+.inspector-actions {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.85;
+}
 
 
 

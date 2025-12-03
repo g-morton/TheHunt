@@ -4,6 +4,9 @@ import { State, SIDES, GAME } from '../core/state.js';
 import { isMonster } from '../logic/utils.js'; 
 import { playSfx } from '../core/sound.js';
 
+import { renderInspector, clearInspector } from '../ui/inspector.js';
+import { traitsOf } from '../logic/traits.js';
+
 function $(id){ return document.getElementById(id); }
 function el(tag, cls){ const n = document.createElement(tag); if (cls) n.className = cls; return n; }
 
@@ -66,7 +69,7 @@ export function updateSelectionHighlights(){
     }
   });
 
-  //CPU roster highlight
+  // CPU roster highlight
   const cpuSlots = document.querySelectorAll('#cpu-roster .stack');
   cpuSlots.forEach((slotEl, i)=>{
     const selected = (State.sel.enemyMonsterIdx === i);
@@ -75,7 +78,19 @@ export function updateSelectionHighlights(){
     if (face) face.classList.toggle('selected', selected);
   });
 
+  // 🟩 Inspector update for selected HAND cards
+  // (show only the *first* selected card with a trait)
+  const hand = State.you.hand;
+  const selIndices = Array.from(State.sel.hand);
+  const firstSel = selIndices.length ? hand[selIndices[0]] : null;
+
+  if (firstSel && traitsOf(firstSel).length) {
+    renderInspector(firstSel, { side: SIDES.YOU, zone: 'hand', index: selIndices[0] });
+  } else {
+    clearInspector();
+  }
 }
+
 
 function renderPile(rootId, cards, faceDown = false) {
   const root = document.getElementById(rootId);
