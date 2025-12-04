@@ -55,7 +55,13 @@ export const State = {
   },
 
   // Per-turn flags
-  cullUsed: false
+  cullUsed: false,
+  
+  ui: {
+    lastSelected: null   // { side, zone, index, ts }
+  }
+
+
 };
 
 // --- helpers kept local to state to avoid duplication elsewhere ---

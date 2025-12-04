@@ -3,6 +3,8 @@ import { State, SIDES } from '../core/state.js';
 import { topOf, num, isMonster, isHunter, checkWin, isRegimented  } from './utils.js';
 import { log } from '../core/log.js';
 import { playSfx } from '../core/sound.js';
+import { validateMinimumGroupSize,validateCannotHuntWith } from './constraints.js';
+import { applyBoostPower } from './trait-boost-power.js';
 
 // Player Hunt: can target either your own roster OR the CPU's roster.
 // - Hunters come from your hand and/or your roster.
@@ -40,20 +42,30 @@ export function executeHunt(){
     return;
   }
 
-    // Regimented rule: if any Regimented Hunters are present,
-  // there must be at least TWO of them in the attacking group.
-  const regimentedHunters = allHunters.filter(h => isRegimented(h.card));
-  if (regimentedHunters.length === 1){
-    const lone = regimentedHunters[0].card;
+  // ✅ Enforce class-based group-size constraints (e.g., Regimented pediteers >= 2)
+  const grpCheck = validateMinimumGroupSize(allHunters);
+  if (!grpCheck.ok){
     playSfx('huntFoiled');
-    log(`
-      <p class="you">
-        ⚠️ <strong>${lone.name}</strong> is <strong>Regimented</strong> and will not
-        hunt alone. You must send at least 
-        <strong>two Regimented Hunters</strong> on a Hunt.
-      </p>
-    `);
+    for (const msg of grpCheck.errors){
+      log(`<p class="you warn">⚠️ ${msg}</p>`);
+    }
+    return; // <- IMPORTANT: stop the hunt here
+  }
+
+  const pairCheck = validateCannotHuntWith(allHunters);
+  if (!pairCheck.ok){
+    playSfx('huntFoiled');
+    for (const msg of pairCheck.errors){
+      log(`<p class="you warn">⚠️ ${msg}</p>`);
+    }
     return;
+  }
+
+  // 🟩 Optional boost: player must have ARMED boostPower
+  const bp = applyBoostPower(SIDES.YOU, allHunters);
+  if (bp.boost > 0){
+    const tagName = bp.tag ? (bp.tag[0].toUpperCase()+bp.tag.slice(1)) : 'Supply';
+    log(`<p class="you">⚙️ Boost Power: Spent ${bp.spent} ${tagName} for <strong>+${bp.boost} Power</strong> (this hunt).</p>`);
   }
 
   // ---- 2) Resolve target monster: own roster OR CPU roster ----

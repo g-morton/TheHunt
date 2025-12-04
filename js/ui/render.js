@@ -31,6 +31,8 @@ function onClickYourHandCard(idx){
   if (sel.has(idx)) sel.delete(idx);
   else sel.add(idx);
 
+  State.ui.lastSelected = { side: SIDES.YOU, zone: 'hand', index: idx, ts: Date.now() };
+
   State.sel.hand = sel;
   window.dispatchEvent(new CustomEvent('selectionChanged'));
 }
@@ -79,17 +81,30 @@ export function updateSelectionHighlights(){
   });
 
   // 🟩 Inspector update for selected HAND cards
-  // (show only the *first* selected card with a trait)
   const hand = State.you.hand;
   const selIndices = Array.from(State.sel.hand);
-  const firstSel = selIndices.length ? hand[selIndices[0]] : null;
+  const lastSel = State.ui?.lastSelected;
+  let cardToShow = null;
+  let cardIdx = null;
 
-  if (firstSel && traitsOf(firstSel).length) {
-    renderInspector(firstSel, { side: SIDES.YOU, zone: 'hand', index: selIndices[0] });
+  // Prefer the most recently selected hand card if still valid
+  if (lastSel && lastSel.zone === 'hand' && selIndices.includes(lastSel.index)) {
+    cardIdx = lastSel.index;
+    cardToShow = hand[cardIdx];
+  } else if (selIndices.length) {
+    // fallback: show the newest (last in selection list)
+    cardIdx = selIndices[selIndices.length - 1];
+    cardToShow = hand[cardIdx];
+  }
+
+  // Only render if card has traits
+  if (cardToShow && traitsOf(cardToShow).length) {
+    renderInspector(cardToShow, { side: SIDES.YOU, zone: 'hand', index: cardIdx });
   } else {
     clearInspector();
   }
 }
+
 
 
 function renderPile(rootId, cards, faceDown = false) {

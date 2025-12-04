@@ -1,65 +1,65 @@
 [
-  { "t": "HUNTER", "name": "Musketeer",  "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg",
+  { "t": "HUNTER", "c" : "pediteer", "name": "Musketeer",  "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg",
       "traits": [
       {
       "label": "Regimented",
       "description": "Pediteers must in hunt in groups of 2 or more.",
       "mechanic": "minimumGroupSize",
-      "params": {}
+      "params": { "class": "pediteer", "minsize": 2 }
       }
     ]
   },
 
-  { "t": "HUNTER", "name": "Haubardier", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg",
+  { "t": "HUNTER", "c" : "pediteer",  "name": "Haubardier", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg",
     "traits": [
       {
       "label": "Regimented",
       "description": "Pediteers must in hunt in groups of 2 or more.",
       "mechanic": "minimumGroupSize",
-      "params": {}
+      "params": { "class": "pediteer", "minsize": 2 }
       }
     ]
   },
 
-  { "t": "HUNTER", "name": "Troubardier", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg",
+  { "t": "HUNTER", "c" : "pediteer",  "name": "Troubardier", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg",
     "traits": [
       {
       "label": "Regimented",
       "description": "Pediteers must in hunt in groups of 2 or more.",
       "mechanic": "minimumGroupSize",
-      "params": {}
+      "params": { "class": "pediteer", "minsize": 2 }
       }
     ]
   },
 
-  { "t": "HUNTER", "name": "Ambuscadier", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg",
+  { "t": "HUNTER", "c" : "pediteer",  "name": "Ambuscadier", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg",
     "traits": [
       {
       "label": "Regimented",
       "description": "Pediteers must in hunt in groups of 2 or more.",
       "mechanic": "minimumGroupSize",
-      "params": {}
+      "params": { "class": "pediteer", "minsize": 2 }
       },
       {
       "label": "Skirmisher",
-      "description": "On hunt succcess, opponent mills x cards from deck.",
+      "description": "On hunt succcess, opponent mills x cards from deck. (TBC)",
       "mechanic": "deckMillOnHuntSuccess",
       "params": {"x": 1 }
       }
     ]
   },
 
-    { "t": "HUNTER", "name": "Lamplighter", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg",
+    { "t": "HUNTER", "c" : "pediteer",  "name": "Lamplighter", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg",
     "traits": [
       {
       "label": "Regimented",
       "description": "Pediteers must in hunt in groups of 2 or more.",
       "mechanic": "minimumGroupSize",
-      "params": {}
+      "params": { "class": "pediteer", "minsize": 2 }
       },
       {
-      "label": "Skirmisher",
-      "description": "On hunt succcess, you may draw x cards from deck. Put y into your backlog. Burn the rest.",
+      "label": "Pathfinder",
+      "description": "On hunt succcess, you may draw x cards from deck. Put y into your backlog. Burn the rest. (TBC)",
       "mechanic": "deckDrawOnHuntSuccess",
       "params": {"x": 3, "y": 1}
       }
@@ -69,50 +69,50 @@
 
 
 
-  { "t": "HUNTER", "name": "Swordist",   "power": 4, "foil": 2, "requires": { "Kit": 2 }, "img": "swordist.jpg",
+  { "t": "HUNTER", "c" : "martial", "name": "Swordist",   "power": 4, "foil": 2, "requires": { "Kit": 2 }, "img": "swordist.jpg",
     "traits": [
       {
       "label": "Spathidril",
-      "description": "x Kit. Burn 1 monster from any roster of Power 4 or less.",
+      "description": "x Kit. Burn 1 monster from any roster of Power 4 or less. (TBC)",
       "mechanic": "burnMonster",
       "params": {"x" : 2, "supply": "kit" }
       }
     ]
   },
 
-  { "t": "HUNTER", "name": "Pistoleer",      "power": 4, "foil": 2, "requires": { "Kit": 1, "Script": 1 }, "img": "pistoleer.jpg",
+  { "t": "HUNTER", "c" : "martial", "name": "Pistoleer",      "power": 4, "foil": 2, "requires": { "Kit": 1, "Script": 1 }, "img": "pistoleer.jpg",
     "traits": [
       {
       "label": "Skold-shot",
-      "description": "x Script for x Power.",
+      "description": "x Script for x Power. (TBC)",
       "mechanic": "boostPower",
       "params": {"x" : "any", "supply": "script" }
       }
     ]
   },
 
-  { "t": "HUNTER", "name": "Sagaar",      "power": 4, "foil": 2, "requires": { "Kit": 2 }, "img": "pistoleer.jpg",
+  { "t": "HUNTER", "c" : "martial", "name": "Sagaar",      "power": 4, "foil": 2, "requires": { "Kit": 2 }, "img": "pistoleer.jpg",
     "traits": [
       {
       "label": "Ritual form",
-      "description": "x Kit. Attack current monster again or hunt a new monster.",
+      "description": "2 Kit. Attack current monster again or hunt a new monster. (TBC)",
       "mechanic": "multiAttack",
       "params": {"x" : 2, "supply": "kit" }
       },
       {
       "label": "Aversion",
-      "description": "Will not hunt with x",
-      "mechanic": "aversionToType",
-      "params": { "x" : "Lahzars" }
+      "description": "Will not hunt with lahzars",
+      "mechanic": "cannotHuntWith",
+      "params": { "class" : "lahzar" }
       }
     ]
   },
   
-  { "t": "HUNTER", "name": "Toxothete",      "power": 4, "foil": 2, "requires": { "Kit": 2 }, "img": "pistoleer.jpg",
+  { "t": "HUNTER", "c" : "martial", "name": "Toxothete",      "power": 4, "foil": 2, "requires": { "Kit": 2 }, "img": "pistoleer.jpg",
     "traits": [
       {
       "label": "Longbow",
-      "description": "Plus x Power vs opponent's roster.",
+      "description": "Plus x Power vs opponent's roster. (TBC)",
       "mechanic": "boostPowerVsOpponentRoster",
       "params": { "x" : 2 }
       }
@@ -121,44 +121,44 @@
 
 
 
-  { "t": "HUNTER", "name": "Fulgar",      "power": 6, "foil": 2, "requires": { "Treacle": 3 }, "img": "fulgar.jpg",
+  { "t": "HUNTER", "c" : "lahzar", "name": "Fulgar",      "power": 6, "foil": 2, "requires": { "Treacle": 3 }, "img": "fulgar.jpg",
     "traits": [
       {
       "label": "Thermistor",
-      "description": "x Treacle for x Power.",
+      "description": "x Treacle for x Power. (TBC)",
       "mechanic": "boostPower",
       "params": {"x" : "any", "supply": "Treacle" }
       }
     ]
   },  
 
-  { "t": "HUNTER", "name": "Wit",         "power": 4, "foil": 4, "requires": { "Treacle": 3 }, "img": "fulgar.jpg",
+  { "t": "HUNTER", "c" : "lahzar", "name": "Wit",         "power": 4, "foil": 4, "requires": { "Treacle": 3 }, "img": "fulgar.jpg",
     "traits": [
       {
       "label": "Scathe",
-      "description": "x Treacle. Opponent burns x random cards from their hand.",
+      "description": "x Treacle. Opponent burns x random cards from their hand. (TBC)",
       "mechanic": "handMillRandom",
       "params": {"x" : "any", "supply": "Treacle" }
       }
     ]
   },
 
-  { "t": "HUNTER", "name": "Sciomane",    "power": 3, "foil": 3, "requires": { "Treacle": 3 }, "img": "fulgar.jpg",
+  { "t": "HUNTER", "c" : "lahzar", "name": "Sciomane",    "power": 3, "foil": 3, "requires": { "Treacle": 3 }, "img": "fulgar.jpg",
     "traits": [
       {
       "label": "Gudgeon master",
-      "description": "On hunt start, burn x monsters in any roster of power 4 or less. Gain x in Power.",
+      "description": "On hunt start, burn x monsters in any roster of power 4 or less. Gain x in Power. (TBC)",
       "mechanic": "burnMonsterBoostPowerOnHuntStart",
       "params": {"x" : "any"}
       }
     ]
   },
 
-  { "t": "HUNTER", "name": "Dexter",      "power": 5, "foil": 3, "requires": { "Treacle": 3 }, "img": "fulgar.jpg",
+  { "t": "HUNTER", "c" : "lahzar", "name": "Dexter",      "power": 5, "foil": 3, "requires": { "Treacle": 3 }, "img": "fulgar.jpg",
     "traits": [
       {
       "label": "Surge",
-      "description": "x Treacle. Plus x Power and opponent burns x random cards from their hand. Then flip a coin - Tails: burn Dexter.",
+      "description": "x Treacle. Plus x Power and opponent burns x random cards from their hand. Then flip a coin - Tails: burn Dexter. (TBC)",
       "mechanic": "boostPowerAndHandMillCoinFlip",
       "params": {"x": 2}
       }
@@ -169,14 +169,13 @@
 
 
 
-  { "t": "HUNTER", "name": "Leer",      "power": 2, "foil": 2, "requires": { "Script": 1 }, "img": "lurksman.jpg" },
-  { "t": "HUNTER", "name": "Lurksman",      "power": 2, "foil": 2, "requires": { "Script": 1 }, "img": "lurksman.jpg" },
-  { "t": "HUNTER", "name": "Factotum",      "power": 2, "foil": 2, "requires": { "Treacle": 1 }, "img": "lurksman.jpg" },
+  { "t": "HUNTER", "c" : "", "name": "Leer",      "power": 2, "foil": 2, "requires": { "Script": 1 }, "img": "lurksman.jpg" },
+  { "t": "HUNTER", "c" : "", "name": "Lurksman",      "power": 2, "foil": 2, "requires": { "Script": 1 }, "img": "lurksman.jpg" },
+  { "t": "HUNTER", "c" : "", "name": "Factotum",      "power": 2, "foil": 2, "requires": { "Treacle": 1 }, "img": "lurksman.jpg" },
 
+  { "t": "HUNTER", "c" : "", "name": "Skold",      "power": 2, "foil": 4, "requires": { "Kit": 1, "Script": 2 }, "img": "fulgar.jpg" },
+  { "t": "HUNTER", "c" : "", "name": "Scourge",      "power": 6, "foil": 2, "requires": { "Kit": 1, "Script": 2 }, "img": "fulgar.jpg" },
 
-
-  { "t": "HUNTER", "name": "Skold",      "power": 2, "foil": 4, "requires": { "Kit": 1, "Script": 2 }, "img": "fulgar.jpg" },
-  { "t": "HUNTER", "name": "Scourge",      "power": 6, "foil": 2, "requires": { "Kit": 1, "Script": 2 }, "img": "fulgar.jpg" },
 
   { "t": "MONSTER", "name": "Grinling",   "power": 2, "tender": 1, "img": "grinling.jpg" },
   { "t": "MONSTER", "name": "Bogle",   "power": 4, "tender": 2, "img": "bogle.jpg" },

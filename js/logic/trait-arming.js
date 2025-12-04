@@ -20,3 +20,36 @@ export function armedTraits(card){
   const set = armedMap.get(card);
   return set ? Array.from(set) : [];
 }
+
+// Add to existing file:
+
+export function armedForMechanic(card, mechanic){
+  const set = armedMap.get(card);
+  if (!set) return [];
+  return Array.from(set).filter(tr => tr?.mechanic === mechanic);
+}
+
+// Consume (clear) a specific armed trait on this card
+export function clearArmed(card, trait){
+  const set = armedMap.get(card);
+  if (!set) return;
+  set.delete(trait);
+  if (!set.size) armedMap.delete(card);
+}
+
+// Consume & return all armed traits for a given mechanic from a hunter list
+export function popArmedTraitsFromHunters(hunters, mechanic){
+  const armed = [];
+  for (const h of (hunters || [])){
+    const card = h?.card || h;
+    if (!card) continue;
+    const list = armedForMechanic(card, mechanic);
+    if (list.length){
+      for (const tr of list){
+        armed.push({ card, trait: tr });
+        clearArmed(card, tr);
+      }
+    }
+  }
+  return armed;
+}

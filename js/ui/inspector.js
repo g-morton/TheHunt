@@ -4,6 +4,7 @@ import { traitsOf, isPassive, isActive } from '../logic/traits.js';
 import { getParam } from '../logic/traits.js';
 import { countSupplyInHand } from '../logic/supply.js';
 import { isArmed, toggleArmed } from '../logic/trait-arming.js';
+import { getClasses } from '../logic/constraints.js';
 
 // Root getter
 function inspectorRoot(){
@@ -15,9 +16,12 @@ export function clearInspector(){
   if (!root) return;
   root.classList.add('empty');
   root.innerHTML = `
-    <p class="inspector-hint">
-      Hover or select a card to see its details and traits.
-    </p>
+            <p class="inspector-hint">
+              Select a hunter card in your hand to see its details and traits.
+              Some traits are passive, others require activation and/or have a supply cost.
+              <br /><br />
+              Activating a trait with a cost will automatically consume all the required supply from you hand.
+            </p>
   `;
 }
 
@@ -46,6 +50,13 @@ export function renderInspector(card, origin = { side: SIDES.YOU }){
   // Stats row
   const stats = document.createElement('div');
   stats.className = 'inspector-stats';
+
+  // Class pill(s)
+  const classes = getClasses(card);
+  if (classes.length){
+    stats.appendChild(pill(`Class: ${classes.map(cap).join(', ')}`));
+  }
+
   if (card.power != null){
     stats.appendChild(pill(`Power: ${card.power}`));
   }
