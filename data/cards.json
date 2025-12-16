@@ -66,6 +66,22 @@
     ]
   },
 
+      { "t": "HUNTER", "c" : "pediteer",  "name": "Franklock", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "franklock.jpg",
+    "traits": [
+      {
+      "label": "Regimented",
+      "description": "Pediteers must in hunt in groups of 2 or more.",
+      "mechanic": "minimumGroupSize",
+      "params": { "class": "pediteer", "minsize": 2 }
+      },
+      {
+      "label": "Marksman",
+      "description": "Flip a coin - Heads: x2 power. Tails: Miss!",
+      "mechanic": "doublePowerCoinFlip",
+      "params": {"x": 3, "y": 1}
+      }
+    ]
+  },
 
 
 
@@ -108,11 +124,14 @@
     ]
   },
   
+
+
+
   { "t": "HUNTER", "c" : "martial", "name": "Toxothete",      "power": 4, "foil": 2, "requires": { "Kit": 2 }, "img": "pistoleer.jpg",
     "traits": [
       {
       "label": "Longbow",
-      "description": "Plus x Power vs opponent's roster. (TBC)",
+      "description": "Plus x Power vs opponent's roster. (TBC)", 
       "mechanic": "boostPowerVsOpponentRoster",
       "params": { "x" : 2 }
       }
