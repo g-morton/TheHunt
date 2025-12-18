@@ -1,5 +1,5 @@
 [
-  { "t": "HUNTER", "c" : "pediteer", "name": "Musketeer",  "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg",
+  { "t": "HUNTER", "c" : "pediteer", "name": "Musketeer",  "power": 2, "foil": 0, "requires": { "any": 1 }, "img": "pediteer.jpg",
       "traits": [
       {
       "label": "Regimented",
@@ -10,7 +10,7 @@
     ]
   },
 
-  { "t": "HUNTER", "c" : "pediteer",  "name": "Haubardier", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg",
+  { "t": "HUNTER", "c" : "pediteer",  "name": "Haubardier", "power": 2, "foil": 0, "requires": { "any": 1 }, "img": "pediteer.jpg",
     "traits": [
       {
       "label": "Regimented",
@@ -21,7 +21,7 @@
     ]
   },
 
-  { "t": "HUNTER", "c" : "pediteer",  "name": "Troubardier", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg",
+  { "t": "HUNTER", "c" : "pediteer",  "name": "Troubardier", "power": 2, "foil": 0, "requires": { "any": 1 }, "img": "pediteer.jpg",
     "traits": [
       {
       "label": "Regimented",
@@ -42,14 +42,14 @@
       },
       {
       "label": "Skirmisher",
-      "description": "On hunt succcess, opponent mills x cards from deck. (TBC)",
+      "description": "On hunt success, opponent burns the top card from their deck.",
       "mechanic": "deckMillOnHuntSuccess",
       "params": {"x": 1 }
       }
     ]
   },
 
-    { "t": "HUNTER", "c" : "pediteer",  "name": "Lamplighter", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "pediteer.jpg",
+    { "t": "HUNTER", "c" : "pediteer",  "name": "Lamplighter", "power": 1, "foil": 2, "requires": { "Kit": 1 }, "img": "pediteer.jpg",
     "traits": [
       {
       "label": "Regimented",
@@ -59,14 +59,14 @@
       },
       {
       "label": "Pathfinder",
-      "description": "On hunt succcess, you may draw x cards from deck. Put y into your backlog. Burn the rest. (TBC)",
+      "description": "Discard instead of hunting: Draw 3 cards from Deck. Put 1 in backlog. Burn 2.",
       "mechanic": "deckDrawOnHuntSuccess",
       "params": {"x": 3, "y": 1}
       }
     ]
   },
 
-      { "t": "HUNTER", "c" : "pediteer",  "name": "Franklock", "power": 2, "foil": 1, "requires": { "any": 1 }, "img": "franklock.jpg",
+      { "t": "HUNTER", "c" : "pediteer",  "name": "Franklock", "power": 2, "foil": 1, "requires": { "Kit": 1 }, "img": "franklock.jpg",
     "traits": [
       {
       "label": "Regimented",
@@ -76,7 +76,7 @@
       },
       {
       "label": "Marksman",
-      "description": "Flip a coin - Heads: x2 power. Tails: Miss!",
+      "description": "Flip a coin - Heads: Double power value. Tails: Miss!",
       "mechanic": "doublePowerCoinFlip",
       "params": {"x": 3, "y": 1}
       }
@@ -85,35 +85,35 @@
 
 
 
-  { "t": "HUNTER", "c" : "martial", "name": "Swordist",   "power": 4, "foil": 2, "requires": { "Kit": 2 }, "img": "swordist.jpg",
+  { "t": "HUNTER", "c" : "martial", "name": "Swordist",   "power": 3, "foil": 1, "requires": { "Kit": 2 }, "img": "swordist.jpg",
     "traits": [
       {
       "label": "Spathidril",
-      "description": "x Kit. Burn 1 monster from any roster of Power 4 or less. (TBC)",
+      "description": "1S. Burn 1 card from any roster of Power 4 or less.",
       "mechanic": "burnMonster",
-      "params": {"x" : 2, "supply": "kit" }
+      "params": {"x" : 1, "supply": "script" }
       }
     ]
   },
 
-  { "t": "HUNTER", "c" : "martial", "name": "Pistoleer",      "power": 4, "foil": 2, "requires": { "Kit": 1, "Script": 1 }, "img": "pistoleer.jpg",
+  { "t": "HUNTER", "c" : "martial", "name": "Pistoleer",      "power": 3, "foil": 1, "requires": { "Kit": 2}, "img": "pistoleer.jpg",
     "traits": [
       {
       "label": "Skold-shot",
-      "description": "x Script for x Power. (TBC)",
+      "description": "1S for 1 Power.",
       "mechanic": "boostPower",
-      "params": {"x" : "any", "supply": "script" }
+      "params": {"x" : "1", "supply": "script" }
       }
     ]
   },
 
-  { "t": "HUNTER", "c" : "martial", "name": "Sagaar",      "power": 4, "foil": 2, "requires": { "Kit": 2 }, "img": "pistoleer.jpg",
+  { "t": "HUNTER", "c" : "martial", "name": "Sagaar",      "power": 3, "foil": 1, "requires": { "Kit": 2 }, "img": "pistoleer.jpg",
     "traits": [
       {
       "label": "Ritual form",
-      "description": "2 Kit. Attack current monster again or hunt a new monster. (TBC)",
+      "description": "1K Flip a coin - Heads: Hunt again. Tails: Discard Sagaar.",
       "mechanic": "multiAttack",
-      "params": {"x" : 2, "supply": "kit" }
+      "params": {"x" : 1, "supply": "kit" }
       },
       {
       "label": "Aversion",
@@ -127,11 +127,11 @@
 
 
 
-  { "t": "HUNTER", "c" : "martial", "name": "Toxothete",      "power": 4, "foil": 2, "requires": { "Kit": 2 }, "img": "pistoleer.jpg",
+  { "t": "HUNTER", "c" : "martial", "name": "Toxothete",      "power": 3, "foil": 1, "requires": { "Kit": 2 }, "img": "pistoleer.jpg",
     "traits": [
       {
       "label": "Longbow",
-      "description": "Plus x Power vs opponent's roster. (TBC)", 
+      "description": "1S. Plus 2 power vs opponents roster", 
       "mechanic": "boostPowerVsOpponentRoster",
       "params": { "x" : 2 }
       }
@@ -140,68 +140,91 @@
 
 
 
-  { "t": "HUNTER", "c" : "lahzar", "name": "Fulgar",      "power": 6, "foil": 2, "requires": { "Treacle": 3 }, "img": "fulgar.jpg",
+  { "t": "HUNTER", "c" : "lahzar", "name": "Fulgar",      "power": 4, "foil": 2, "requires": { "Treacle": 2 }, "img": "fulgar.jpg",
     "traits": [
       {
-      "label": "Thermistor",
-      "description": "x Treacle for x Power. (TBC)",
+      "label": "Arcing",
+      "description": "xT. Gain x power.",
       "mechanic": "boostPower",
       "params": {"x" : "any", "supply": "Treacle" }
+      },
+      {
+      "label": "Thermistor",
+      "description": "Burn Fulgar for +2 power.",
+      "mechanic": "boostPowerWithBurn"
       }
     ]
   },  
 
-  { "t": "HUNTER", "c" : "lahzar", "name": "Wit",         "power": 4, "foil": 4, "requires": { "Treacle": 3 }, "img": "fulgar.jpg",
+  { "t": "HUNTER", "c" : "lahzar", "name": "Wit",         "power": 3, "foil": 3, "requires": { "Treacle": 2 }, "img": "fulgar.jpg",
     "traits": [
       {
       "label": "Scathe",
-      "description": "x Treacle. Opponent burns x random cards from their hand. (TBC)",
+      "description": "xT. Opponent burns x random cards from their hand.",
       "mechanic": "handMillRandom",
       "params": {"x" : "any", "supply": "Treacle" }
       }
     ]
   },
 
-  { "t": "HUNTER", "c" : "lahzar", "name": "Sciomane",    "power": 3, "foil": 3, "requires": { "Treacle": 3 }, "img": "fulgar.jpg",
+  { "t": "HUNTER", "c" : "lahzar", "name": "Sciomane",    "power": 3, "foil": 3, "requires": { "Treacle": 2 }, "img": "fulgar.jpg",
     "traits": [
       {
       "label": "Gudgeon master",
-      "description": "On hunt start, burn x monsters in any roster of power 4 or less. Gain x in Power. (TBC)",
-      "mechanic": "burnMonsterBoostPowerOnHuntStart",
-      "params": {"x" : "any"}
+      "description": "2T. Burn any gudgeons appearing in any roster for 2 power each.",
+      "mechanic": "burnGudgeonMonstersBoostPowerOnHuntStart",
+      "params": {"2" : "Treacle"}
       }
     ]
   },
 
-  { "t": "HUNTER", "c" : "lahzar", "name": "Dexter",      "power": 5, "foil": 3, "requires": { "Treacle": 3 }, "img": "fulgar.jpg",
+  { "t": "HUNTER", "c" : "lahzar", "name": "Dexter",      "power": 3, "foil": 3, "requires": { "Treacle": 2 }, "img": "fulgar.jpg",
     "traits": [
       {
       "label": "Surge",
-      "description": "x Treacle. Plus x Power and opponent burns x random cards from their hand. Then flip a coin - Tails: burn Dexter. (TBC)",
+      "description": "xT. Gain x power, then flip a coin - Heads: Opponent burns a card from their hand. Tails: You burn the top card from your deck.",
       "mechanic": "boostPowerAndHandMillCoinFlip",
       "params": {"x": 2}
       }
     ]
   },
 
+    { "t": "HUNTER", "c" : "lahzar", "name": "Bane",      "power": 2, "foil": 3, "requires": { "Treacle": 1, "Script": 1 }, "img": "fulgar.jpg",
+    "traits": [
+      {
+      "label": "Bitterbright",
+      "description": "1T 1S.  Place the top card from your deck into your backlog. Opponent burns a card from their hand.",
+      "mechanic": "boostPowerAndHandMillCoinFlip"
+      }
+    ]
+  },
 
 
 
+  { "t": "HUNTER", "c" : "", "name": "Telltale",      "power": 1, "foil": 2, "requires": { "Script": 1 }, "img": "lurksman.jpg" },
+  { "t": "HUNTER", "c" : "", "name": "Leer",          "power": 2, "foil": 1, "requires": { "Script": 1 }, "img": "lurksman.jpg" },
+  { "t": "HUNTER", "c" : "", "name": "Lurksman",      "power": 2, "foil": 1, "requires": { "Script": 1 }, "img": "lurksman.jpg" },
+  { "t": "HUNTER", "c" : "", "name": "Factotum",      "power": 1, "foil": 1, "requires": { "Script": 1 }, "img": "lurksman.jpg" },
 
-  { "t": "HUNTER", "c" : "", "name": "Leer",      "power": 2, "foil": 2, "requires": { "Script": 1 }, "img": "lurksman.jpg" },
-  { "t": "HUNTER", "c" : "", "name": "Lurksman",      "power": 2, "foil": 2, "requires": { "Script": 1 }, "img": "lurksman.jpg" },
-  { "t": "HUNTER", "c" : "", "name": "Factotum",      "power": 2, "foil": 2, "requires": { "Treacle": 1 }, "img": "lurksman.jpg" },
-
-  { "t": "HUNTER", "c" : "", "name": "Skold",      "power": 2, "foil": 4, "requires": { "Kit": 1, "Script": 2 }, "img": "fulgar.jpg" },
-  { "t": "HUNTER", "c" : "", "name": "Scourge",      "power": 6, "foil": 2, "requires": { "Kit": 1, "Script": 2 }, "img": "fulgar.jpg" },
+  { "t": "HUNTER", "c" : "", "name": "Skold",      "power": 2, "foil": 3, "requires": {"Script": 2 }, "img": "fulgar.jpg" },
+  { "t": "HUNTER", "c" : "", "name": "Scourge",      "power": 3, "foil": 2, "requires": {"Script": 2 }, "img": "fulgar.jpg" },
 
 
   { "t": "MONSTER", "name": "Grinling",   "power": 2, "tender": 1, "img": "grinling.jpg" },
+
+  { "t": "MONSTER", "name": "Pig-eared gudgeon",   "power": 3, "tender": 1, "img": "bogle.jpg" },
+  { "t": "MONSTER", "name": "Jackstaw gudgeon",   "power": 3, "tender": 1, "img": "bogle.jpg" },
+  { "t": "MONSTER", "name": "Rever gudgeon",   "power": 3, "tender": 1, "img": "bogle.jpg" },
+  
   { "t": "MONSTER", "name": "Bogle",   "power": 4, "tender": 2, "img": "bogle.jpg" },
+  { "t": "MONSTER", "name": "Nicker",   "power": 5, "tender": 2, "img": "bogle.jpg" },
+
   { "t": "MONSTER", "name": "Brodchin",       "power": 6, "tender": 3, "img": "brodchin.jpg" },
-  { "t": "MONSTER", "name": "Swarty", "power": 8, "tender": 4, "img": "swarty.jpg" },
+  { "t": "MONSTER", "name": "Swarty Hobnag", "power": 8, "tender": 4, "img": "swarty.jpg" },
+
   { "t": "MONSTER", "name": "Shrewd", "power": 10, "tender": 5, "img": "shrewd.jpg" },
-  { "t": "MONSTER", "name": "Trought", "power": 14, "tender": 6, "img": "trought.jpg" },
+
+  { "t": "MONSTER", "name": "Herdebog Trought", "power": 14, "tender": 6, "img": "trought.jpg" },
 
   { "t": "SUPPLY", "name": "Kit",        "tag": "Kit", "img": "kit.jpg" },
   { "t": "SUPPLY", "name": "Script",     "tag": "Script", "img": "script.jpg"},
