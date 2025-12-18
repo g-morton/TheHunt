@@ -220,11 +220,11 @@
   { "t": "MONSTER", "name": "Nicker",   "power": 5, "tender": 2, "img": "bogle.jpg" },
 
   { "t": "MONSTER", "name": "Brodchin",       "power": 6, "tender": 3, "img": "brodchin.jpg" },
-  { "t": "MONSTER", "name": "Swarty Hobnag", "power": 8, "tender": 4, "img": "swarty.jpg" },
+  { "t": "MONSTER", "name": "Swarty", "power": 8, "tender": 4, "img": "swarty.jpg" },
 
   { "t": "MONSTER", "name": "Shrewd", "power": 10, "tender": 5, "img": "shrewd.jpg" },
 
-  { "t": "MONSTER", "name": "Herdebog Trought", "power": 14, "tender": 6, "img": "trought.jpg" },
+  { "t": "MONSTER", "name": "Trought", "power": 14, "tender": 6, "img": "trought.jpg" },
 
   { "t": "SUPPLY", "name": "Kit",        "tag": "Kit", "img": "kit.jpg" },
   { "t": "SUPPLY", "name": "Script",     "tag": "Script", "img": "script.jpg"},
